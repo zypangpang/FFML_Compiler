@@ -7,3 +7,4 @@ class EBNF_OP(Enum):
     QUESTION = 3
 
 EBNF_OP_SYMBOL=['+','*','?']
+EMPTY='#'

@@ -1,4 +1,4 @@
-from constants import EBNF_OP_SYMBOL,EMPTY, ELE_TYPE, TERM_BEGIN_CHARS
+from constants import EBNF_OP_SYMBOL,EMPTY, ELE_TYPE, TERM_BEGIN_CHARS,ENDMARK
 from utils import print_seperator, print_set
 from collections import defaultdict
 import sys
@@ -6,11 +6,12 @@ import sys
 
 global_first_set={}
 global_grammar={}
+global_start_symbol=None
 
-global_addto_first=defaultdict(list)
-global_addto_follow=defaultdict(list)
+#global_addto_first=defaultdict(list)
+global_addto_follow={}
 
-global_follow_set=defaultdict(set)
+global_follow_set={}
 
 class Element:
     """The element of grammar production right part"""
@@ -35,6 +36,8 @@ class Element:
 def read_EBNF(file_path):
     grammar = {}
     with open(file_path, "r") as f:
+        first_line=f.readline().strip()
+        start_symbol=first_line
         line = f.readline()
         while line:
             left=line.split()[0]
@@ -46,7 +49,7 @@ def read_EBNF(file_path):
 
             grammar[left]=production
             line = f.readline()
-    return grammar
+    return start_symbol, grammar
 
 
 def process_right(grammar):
@@ -126,21 +129,50 @@ def first_set(grammar):
         if nt not in global_first_set:
             global_first_set[nt]=nonterminal_first_set(nt)
 
+def init_follow_set(grammar):
+    for nt in grammar:
+        global_addto_follow[nt]=set()
+        global_follow_set[nt]=set()
+    global_follow_set[global_start_symbol].add(ENDMARK)
+
 def followset_rule_1(elements, follow_elements=[]):
     for i in range(0, len(elements)):
         ele = elements[i]
         if ele.type == ELE_TYPE.NONTERM:
             global_follow_set[ele.symbols[0]].update(elements_first_set(elements[i + 1:]+follow_elements) - {EMPTY})
         elif ele.type == ELE_TYPE.COMBI:
-            combi_get_follow(ele, elements[i + 1:]+follow_elements)
+            combi_get_follow_rule1(ele, elements[i + 1:] + follow_elements)
+
+def followset_rule_2(A:str, elements:list, follow_elements=[]):
+    n=len(elements)
+    for i in range(0, n):
+        B:Element = elements[i]
+        if B.type == ELE_TYPE.NONTERM:
+            if EMPTY in elements_first_set(elements[i+1:]+follow_elements):
+                global_addto_follow[A].add(B.symbols[0])
+        elif B.type == ELE_TYPE.COMBI:
+            #debug
+            #if B.symbols[0].symbols[0]=="ConditionStatement":
+            #    print(elements[i + 1:]+follow_elements)
+            #    print(elements_first_set(elements[i + 1:]+follow_elements))
+            #-----
+            combi_get_follow_rule2(A, B, elements[i + 1:]+follow_elements)
 
 
-def combi_get_follow(combi_ele,follow_elements):
+def combi_get_follow_rule1(combi_ele, follow_elements):
     elements = combi_ele.symbols
     followset_rule_1(elements,follow_elements)
     if combi_ele.op == '+' or combi_ele.op == '*':
         if len(elements)>1:
             followset_rule_1([elements[-1]],elements+follow_elements)
+
+def combi_get_follow_rule2(A, combi_ele,follow_elements):
+    elements=combi_ele.symbols
+    followset_rule_2(A, elements, follow_elements)
+    if combi_ele.op == '+' or combi_ele.op == '*':
+        if len(elements)>1:
+            followset_rule_2(A, [elements[-1]],elements+follow_elements)
+
 
 def get_rule1_followset(grammar):
     productions=grammar.values()
@@ -148,14 +180,47 @@ def get_rule1_followset(grammar):
         for line in prod['right']:
             followset_rule_1(line)
 
+def get_addto_followset(grammar):
+    productions = grammar.values()
+    for prod in productions:
+        A=prod['left']
+        for line in prod['right']:
+            followset_rule_2(A,line)
+
+
+def followset_add(A,B, addto_dict):
+    len1 = len(global_follow_set[B])
+    global_follow_set[B].update(global_follow_set[A])
+    if (len1 < len(global_follow_set[B])):
+        follow_rule2_update_nonterm(B,addto_dict)
+
+
+def follow_rule2_update_nonterm(A:str, addto_dict):
+    for B in addto_dict[A]:
+        followset_add(A,B,addto_dict)
+
+def update_followset_rule2(addto_dict):
+    for A,right in addto_dict.items():
+        for B in right:
+            followset_add(A,B,addto_dict)
+def follow_set(grammar):
+    init_follow_set(grammar)
+    get_rule1_followset(grammar)
+    get_addto_followset(grammar)
+    update_followset_rule2(global_addto_follow)
+
 if __name__ == '__main__':
     EBNF_path = "grammar.txt" if len(sys.argv)<=1 else sys.argv[1]
-    global_grammar = read_EBNF(EBNF_path)
+    global_start_symbol,global_grammar = read_EBNF(EBNF_path)
     process_right(global_grammar)
+    print(global_start_symbol)
     #for x in grammar:
     #    print(f"{x} -> {grammar[x]}")
     first_set(global_grammar)
-    get_rule1_followset(global_grammar)
+    follow_set(global_grammar)
 
     print_seperator(print_set,"first set")(global_first_set)
     print_seperator(print_set,"follow set")(global_follow_set)
+    #print_seperator(print_set, "addto")(global_addto_follow)
+    #print_seperator(print_set, "follow set")(global_follow_set)
+

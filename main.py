@@ -1,8 +1,10 @@
 from constants import EBNF_OP_SYMBOL,EMPTY
+import sys
 
 
 global_first_set={}
 global_grammar={}
+
 class Element:
     """The element of grammar production right part"""
 
@@ -93,9 +95,7 @@ def combination_first_set(element):
 
 
 def string_first_set(str):
-    if str[0] == '"':
-        return  {str[1]}
-    elif str[0] == '<':
+    if str[0] in f'"<{EMPTY}':
         return {str}
     else:
         return nonterminal_first_set(str)
@@ -116,12 +116,13 @@ def first_set(grammar):
             global_first_set[nt]=nonterminal_first_set(nt)
 
 if __name__ == '__main__':
-    EBNF_path = "grammar.txt"
+    EBNF_path = "grammar.txt" if len(sys.argv)<=1 else sys.argv[1]
     global_grammar = read_EBNF(EBNF_path)
     process_right(global_grammar)
     #for x in grammar:
     #    print(f"{x} -> {grammar[x]}")
     first_set(global_grammar)
     for x in global_first_set:
-        print(f"{x} -> {global_first_set[x]}")
+        if x[0] not in f'"<{EMPTY}':
+            print(f"{x} -> {global_first_set[x]}")
 

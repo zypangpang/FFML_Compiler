@@ -1,5 +1,6 @@
 from constants import EBNF_OP_SYMBOL,EMPTY, ELE_TYPE, TERM_BEGIN_CHARS
-from _collections import defaultdict
+from utils import print_seperator, print_set
+from collections import defaultdict
 import sys
 
 
@@ -8,6 +9,8 @@ global_grammar={}
 
 global_addto_first=defaultdict(list)
 global_addto_follow=defaultdict(list)
+
+global_follow_set=defaultdict(set)
 
 class Element:
     """The element of grammar production right part"""
@@ -123,14 +126,27 @@ def first_set(grammar):
         if nt not in global_first_set:
             global_first_set[nt]=nonterminal_first_set(nt)
 
-def get_addto_dict(grammar):
+def followset_rule_1(elements, follow_elements=[]):
+    for i in range(0, len(elements)):
+        ele = elements[i]
+        if ele.type == ELE_TYPE.NONTERM:
+            global_follow_set[ele.symbols[0]].update(elements_first_set(elements[i + 1:]+follow_elements) - {EMPTY})
+        elif ele.type == ELE_TYPE.COMBI:
+            combi_get_follow(ele, elements[i + 1:]+follow_elements)
+
+
+def combi_get_follow(combi_ele,follow_elements):
+    elements = combi_ele.symbols
+    followset_rule_1(elements,follow_elements)
+    if combi_ele.op == '+' or combi_ele.op == '*':
+        if len(elements)>1:
+            followset_rule_1([elements[-1]],elements+follow_elements)
+
+def get_rule1_followset(grammar):
     productions=grammar.values()
     for prod in productions:
         for line in prod['right']:
-            for i in range(0,len(line)-1):
-                pass
-            if line[-1].type==ELE_TYPE.COMBI and len(line[-1].symbols)>1:
-                pass
+            followset_rule_1(line)
 
 if __name__ == '__main__':
     EBNF_path = "grammar.txt" if len(sys.argv)<=1 else sys.argv[1]
@@ -139,7 +155,7 @@ if __name__ == '__main__':
     #for x in grammar:
     #    print(f"{x} -> {grammar[x]}")
     first_set(global_grammar)
-    for x in global_first_set:
-        if x[0] not in f'"<{EMPTY}':
-            print(f"{x} -> {global_first_set[x]}")
+    get_rule1_followset(global_grammar)
 
+    print_seperator(print_set,"first set")(global_first_set)
+    print_seperator(print_set,"follow set")(global_follow_set)

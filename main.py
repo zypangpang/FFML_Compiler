@@ -1,5 +1,5 @@
 from constants import EBNF_OP_SYMBOL,EMPTY, ELE_TYPE, TERM_BEGIN_CHARS,ENDMARK
-from utils import print_seperator, print_set
+from utils import format_print, print_set
 from collections import defaultdict
 import sys
 
@@ -213,14 +213,13 @@ if __name__ == '__main__':
     EBNF_path = "grammar.txt" if len(sys.argv)<=1 else sys.argv[1]
     global_start_symbol,global_grammar = read_EBNF(EBNF_path)
     process_right(global_grammar)
-    print(global_start_symbol)
     #for x in grammar:
     #    print(f"{x} -> {grammar[x]}")
     first_set(global_grammar)
     follow_set(global_grammar)
 
-    print_seperator(print_set,"first set")(global_first_set)
-    print_seperator(print_set,"follow set")(global_follow_set)
+    format_print(print, "start symbol")(global_start_symbol)
+    format_print(print_set, "first set",True)(global_first_set)
+    format_print(print_set, "follow set",True)(global_follow_set)
     #print_seperator(print_set, "addto")(global_addto_follow)
-    #print_seperator(print_set, "follow set")(global_follow_set)
 

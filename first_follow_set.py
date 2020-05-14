@@ -4,6 +4,8 @@ from grammar_related import Element
 
 class FirstFollowSet:
     def __init__(self, grammar, ss):
+        self.__has_first=False
+        self.__has_follow=False
         self.__first_set = {}
         self.__follow_set = {}
         self.__grammar = grammar
@@ -55,11 +57,6 @@ class FirstFollowSet:
         else:
             raise Exception("invalid element type")
 
-    def first_set(self):
-        for nt in self.__grammar:
-            if nt not in self.__first_set:
-                self.__first_set[nt] = self.nonterminal_first_set(nt)
-        return self.__first_set
 
     def init_follow_set(self):
         for nt in self.__grammar:
@@ -133,9 +130,29 @@ class FirstFollowSet:
             for B in right:
                 self.followset_add(A, B, addto_dict)
 
+    #### public methods
     def follow_set(self):
+        if self.__has_follow:
+            return self.__follow_set
+
         self.init_follow_set()
         self.get_rule1_followset()
         self.get_addto_followset()
         self.update_followset_rule2(self.__addto_follow)
+
+        self.__has_follow=True
         return self.__follow_set
+
+    def first_set(self):
+        if self.__has_first:
+            return self.__first_set
+
+        for nt in self.__grammar:
+            if nt not in self.__first_set:
+                self.__first_set[nt] = self.nonterminal_first_set(nt)
+        self.__has_first=True
+
+        return self.__first_set
+
+    def get_grammar(self):
+        return self.__grammar

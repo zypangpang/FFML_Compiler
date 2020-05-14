@@ -4,6 +4,13 @@ from grammar_related import get_grammar_from_file
 from first_follow_set import FirstFollowSet
 from constants import EMPTY
 
+def check_nullable(ff: FirstFollowSet):
+    grammar = ff.get_grammar()
+    first_set=ff.first_set()
+    for A in grammar:
+        if EMPTY in first_set[A]:
+            print(A)
+
 def check_LL1(ff:FirstFollowSet):
     grammar=ff.get_grammar()
     #first_set=ff.first_set()
@@ -46,5 +53,6 @@ if __name__ == '__main__':
     #format_print(print_set, "follow set", True)(follow_set)
     # print_seperator(print_set, "addto")(global_addto_follow)
     print(check_LL1(ff))
+    check_nullable(ff)
 
 

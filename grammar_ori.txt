@@ -24,8 +24,8 @@ Channel :
 	"OTH"
 	;
 EventList :
-    "[" Event "]" 
 	Sequence
+    "[" Event "]"
 	;
 Sequence :
     "SEQ" ("(" IntegerLiteral ")")? "[" Event ("," Event)+ "]"
@@ -60,11 +60,11 @@ FactorExpression2 :
 	"/" Factors (FactorExpression2)?
 	;
 Factors :
-    "(" AdditiveExpression1 ")"
-	IntegerLiteral
+    IntegerLiteral
 	EventParameter
 	Boolean
 	String
+    "(" AdditiveExpression1 ")"
 	;
 IntegerLiteral :
     <DIGIT>

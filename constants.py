@@ -15,3 +15,4 @@ EBNF_OP_SYMBOL=['+','*','?']
 EMPTY='#'
 ENDMARK='$'
 TERM_BEGIN_CHARS= f'"<{EMPTY}'
+

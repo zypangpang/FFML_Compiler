@@ -33,7 +33,7 @@ class FirstFollowSet:
         return fset
 
     def combination_first_set(self, element):
-        fset = self.elements_first_set(element.symbols)
+        fset = self.elements_first_set(element.content)
         if element.op == '?' or element.op == '*':
             fset.add(EMPTY)
         return fset
@@ -46,9 +46,9 @@ class FirstFollowSet:
 
     def element_first_set(self, element):
         if element.type == ELE_TYPE.TERM:
-            return {element.symbols[0]}
+            return {element.content}
         elif element.type == ELE_TYPE.NONTERM:
-            str = element.symbols[0]
+            str = element.content
             if str not in self.__first_set:
                 self.__first_set[str] = self.nonterminal_first_set(str)
             return self.__first_set[str]
@@ -68,7 +68,7 @@ class FirstFollowSet:
         for i in range(0, len(elements)):
             ele = elements[i]
             if ele.type == ELE_TYPE.NONTERM:
-                self.__follow_set[ele.symbols[0]].update(
+                self.__follow_set[ele.content].update(
                     self.elements_first_set(elements[i + 1:] + follow_elements) - {EMPTY})
             elif ele.type == ELE_TYPE.COMBI:
                 self.combi_get_follow_rule1(ele, elements[i + 1:] + follow_elements)
@@ -79,7 +79,7 @@ class FirstFollowSet:
             B: Element = elements[i]
             if B.type == ELE_TYPE.NONTERM:
                 if EMPTY in self.elements_first_set(elements[i + 1:] + follow_elements):
-                    self.__addto_follow[A].add(B.symbols[0])
+                    self.__addto_follow[A].add(B.content)
             elif B.type == ELE_TYPE.COMBI:
                 # debug
                 # if B.symbols[0].symbols[0]=="ConditionStatement":
@@ -89,14 +89,14 @@ class FirstFollowSet:
                 self.combi_get_follow_rule2(A, B, elements[i + 1:] + follow_elements)
 
     def combi_get_follow_rule1(self, combi_ele, follow_elements):
-        elements = combi_ele.symbols
+        elements = combi_ele.content
         self.followset_rule_1(elements, follow_elements)
         if combi_ele.op == '+' or combi_ele.op == '*':
             if len(elements) > 1:
                 self.followset_rule_1([elements[-1]], elements + follow_elements)
 
     def combi_get_follow_rule2(self, A, combi_ele, follow_elements):
-        elements = combi_ele.symbols
+        elements = combi_ele.content
         self.followset_rule_2(A, elements, follow_elements)
         if combi_ele.op == '+' or combi_ele.op == '*':
             if len(elements) > 1:

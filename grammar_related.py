@@ -1,24 +1,26 @@
-from constants import EBNF_OP_SYMBOL, ELE_TYPE, TERM_BEGIN_CHARS
+from constants import EBNF_OP_SYMBOL, ELE_TYPE, TERM_BEGIN_CHARS,EMPTY
+from global_var import  new_name_gen
+from collections import defaultdict
 
 
 class Element:
     """The element of grammar production right part"""
 
-    def __init__(self, symbols, op=''):
-        self.symbols = symbols
+    def __init__(self, content, op=''):
+        self.content = content
         self.op = op
         if self.op != '':
             self.type = ELE_TYPE.COMBI
-        elif self.symbols[0][0] in TERM_BEGIN_CHARS:
+        elif self.content[0] in TERM_BEGIN_CHARS:
             self.type = ELE_TYPE.TERM
         else:
             self.type = ELE_TYPE.NONTERM
 
     def __str__(self):
-        return f"Element({self.symbols} {self.op})"
+        return f"Element({self.content} {self.op})"
 
     def __repr__(self):
-        return f"({self.symbols} {self.op})"
+        return f"({self.content} {self.op})"
 
 
 def read_EBNF(file_path):
@@ -30,8 +32,8 @@ def read_EBNF(file_path):
         while line:
             left = line.split()[0]
             production = {'left': left, 'right': []}
-            right = f.readline().split()
-            while right[0] != ';':
+            right = f.readline().strip('\n\t |').split()
+            while right[0] not in ';.':
                 production['right'].append(right)
                 right = f.readline().split()
 
@@ -53,14 +55,14 @@ def process_right(grammar):
                     symbols = []
                     while item:
                         if item[-1] in EBNF_OP_SYMBOL:
-                            symbols.append(Element([item[:-2]]))
+                            symbols.append(Element(item[:-2]))
                             break
                         else:
-                            symbols.append(Element([item]))
+                            symbols.append(Element(item))
                         item = next(line, None)
                     right_elements.append(Element(symbols, item[-1]))
                 else:
-                    right_elements.append(Element([item]))
+                    right_elements.append(Element(item))
                 item = next(line, None)
             new_right.append(right_elements)
         production['right'] = new_right
@@ -71,3 +73,42 @@ def get_grammar_from_file(EBNF_path):
     start_symbol, grammar = read_EBNF(EBNF_path)
     process_right(grammar)
     return start_symbol, grammar
+
+
+
+def remove_EBNF_repetition(elements):
+    new_grammar={}
+    new_elements=[]
+    for ele in elements:
+        if ele.type == ELE_TYPE.COMBI:
+            new_name=new_name_gen.__next__()
+            new_grammar[new_name]={'left':new_name,'right':[]}
+            new_rights=new_grammar[new_name]['right']
+            new_elements.append(Element(new_name))
+            if ele.op == '?':
+                new_rights.append([Element(e.content) for e in ele.content])
+                new_rights.append([Element(EMPTY)])
+            elif ele.op == '*':
+                new_rights.append([new_name]+[Element(e.content) for e in ele.content])
+                new_rights.append([Element(EMPTY)])
+            elif ele.op == '+':
+                new_rights.append([new_name]+[Element(e.content) for e in ele.content])
+        else:
+            new_elements.append(ele)
+    return new_elements, new_grammar
+
+
+def EBNF_to_BNF(grammar):
+    grammar_new={}
+    for X in grammar:
+        rights=grammar[X]['right']
+        new_rights=[]
+        for line in rights:
+            new_elements,new_grammar = remove_EBNF_repetition(line)
+            new_rights.append(new_elements)
+            grammar_new={**grammar_new, **new_grammar}
+        grammar_new[X]={'left':X,'right':new_rights}
+    return grammar_new
+
+if __name__ == '__main__':
+    pass

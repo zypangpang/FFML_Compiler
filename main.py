@@ -1,6 +1,6 @@
 import sys
 from utils import format_print, print_set
-from grammar_related import get_grammar_from_file, EBNF_to_BNF
+from grammar_related import get_grammar_from_file, EBNF_to_BNF,remove_same_symbols,sort_grammar
 from first_follow_set import FirstFollowSet
 from constants import EMPTY
 
@@ -44,9 +44,13 @@ if __name__ == '__main__':
     start_symbol, grammar = get_grammar_from_file(EBNF_path)
     #format_print(print_set, "BNF",True)(grammar)
     new_grammar=EBNF_to_BNF(grammar)
-    #format_print(print_set, "BNF",True)(new_grammar)
+    format_print(print_set, "BNF",True)(new_grammar)
+    sort_grammar(new_grammar)
+    format_print(print_set, "BNF",True)(new_grammar)
 
-    #ff = FirstFollowSet(grammar=grammar, ss=start_symbol)
+    remove_same_symbols(new_grammar)
+
+    #ff = FirstFollowSet(grammar=new_grammar, ss=start_symbol)
     #first_set=ff.first_set()
     #follow_set=ff.follow_set()
 

@@ -32,11 +32,13 @@ class FirstFollowSet:
             fset.update(self.elements_first_set(line))
         return fset
 
+    '''
     def combination_first_set(self, element):
         fset = self.elements_first_set(element.content)
         if element.op == '?' or element.op == '*':
             fset.add(EMPTY)
         return fset
+    '''
 
     # def string_first_set(str):
     #    if str[0] in f'"<{EMPTY}':
@@ -45,6 +47,7 @@ class FirstFollowSet:
     #        return nonterminal_first_set(str)
 
     def element_first_set(self, element):
+        #print(element)
         if element.type == ELE_TYPE.TERM:
             return {element.content}
         elif element.type == ELE_TYPE.NONTERM:
@@ -52,8 +55,8 @@ class FirstFollowSet:
             if str not in self.__first_set:
                 self.__first_set[str] = self.nonterminal_first_set(str)
             return self.__first_set[str]
-        elif element.type == ELE_TYPE.COMBI:
-            return self.combination_first_set(element)
+        #elif element.type == ELE_TYPE.COMBI:
+        #    return self.combination_first_set(element)
         else:
             raise Exception("invalid element type")
 
@@ -64,30 +67,30 @@ class FirstFollowSet:
             self.__follow_set[nt] = set()
         self.__follow_set[self.__start_symbol].add(ENDMARK)
 
-    def followset_rule_1(self, elements, follow_elements=[]):
+    def followset_rule_1(self, elements):
         for i in range(0, len(elements)):
             ele = elements[i]
             if ele.type == ELE_TYPE.NONTERM:
                 self.__follow_set[ele.content].update(
-                    self.elements_first_set(elements[i + 1:] + follow_elements) - {EMPTY})
-            elif ele.type == ELE_TYPE.COMBI:
-                self.combi_get_follow_rule1(ele, elements[i + 1:] + follow_elements)
+                    self.elements_first_set(elements[i + 1:]) - {EMPTY})
+            #elif ele.type == ELE_TYPE.COMBI:
+            #    self.combi_get_follow_rule1(ele, elements[i + 1:] + follow_elements)
 
-    def followset_rule_2(self, A: str, elements: list, follow_elements=[]):
+    def followset_rule_2(self, A: str, elements: list):
         n = len(elements)
         for i in range(0, n):
             B: Element = elements[i]
             if B.type == ELE_TYPE.NONTERM:
-                if EMPTY in self.elements_first_set(elements[i + 1:] + follow_elements):
+                if EMPTY in self.elements_first_set(elements[i + 1:]):
                     self.__addto_follow[A].add(B.content)
-            elif B.type == ELE_TYPE.COMBI:
+            #elif B.type == ELE_TYPE.COMBI:
                 # debug
                 # if B.symbols[0].symbols[0]=="ConditionStatement":
                 #    print(elements[i + 1:]+follow_elements)
                 #    print(elements_first_set(elements[i + 1:]+follow_elements))
                 # -----
-                self.combi_get_follow_rule2(A, B, elements[i + 1:] + follow_elements)
-
+            #    self.combi_get_follow_rule2(A, B, elements[i + 1:] + follow_elements)
+    '''
     def combi_get_follow_rule1(self, combi_ele, follow_elements):
         elements = combi_ele.content
         self.followset_rule_1(elements, follow_elements)
@@ -101,6 +104,8 @@ class FirstFollowSet:
         if combi_ele.op == '+' or combi_ele.op == '*':
             if len(elements) > 1:
                 self.followset_rule_2(A, [elements[-1]], elements + follow_elements)
+    '''
+
 
     def get_rule1_followset(self):
         productions = self.__grammar.values()

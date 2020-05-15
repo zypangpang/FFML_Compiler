@@ -22,6 +22,24 @@ class Element:
     def __repr__(self):
         return f"({self.content} {self.op})"
 
+    def __eq__(self, other):
+        if not isinstance(other, Element):
+            # don't attempt to compare against unrelated types
+            return NotImplemented
+
+        return self.content == other.content and self.type == other.type
+
+    def __lt__(self, other):
+        if not isinstance(other, Element):
+           # don't attempt to compare against unrelated types
+            return NotImplemented
+        if self.type==ELE_TYPE.NONTERM and other.type==ELE_TYPE.TERM:
+            return True
+        if self.type==ELE_TYPE.TERM and other.type==ELE_TYPE.NONTERM:
+            return False
+
+        return self.content < other.content
+
 
 def read_EBNF(file_path):
     grammar = {}
@@ -89,10 +107,10 @@ def remove_EBNF_repetition(elements):
                 new_rights.append([Element(e.content) for e in ele.content])
                 new_rights.append([Element(EMPTY)])
             elif ele.op == '*':
-                new_rights.append([new_name]+[Element(e.content) for e in ele.content])
+                new_rights.append([Element(new_name)]+[Element(e.content) for e in ele.content])
                 new_rights.append([Element(EMPTY)])
             elif ele.op == '+':
-                new_rights.append([new_name]+[Element(e.content) for e in ele.content])
+                new_rights.append([Element(new_name)]+[Element(e.content) for e in ele.content])
         else:
             new_elements.append(ele)
     return new_elements, new_grammar
@@ -110,5 +128,38 @@ def EBNF_to_BNF(grammar):
         grammar_new[X]={'left':X,'right':new_rights}
     return grammar_new
 
+def remove_same_symbols(grammar):
+    def dfs(G, name,group):
+        if name in group:
+            return
+        group.add(name)
+        for node in G[name]:
+            dfs(G, node, group)
+
+    same=defaultdict(list)
+    nonterms=[x for x in grammar]
+    n=len(nonterms)
+    for i in range(n-1):
+        A=nonterms[i]
+        for j in range(i+1,n):
+            B=nonterms[j]
+            if(grammar[A]['right']==grammar[B]['right']):
+                same[A].append(B)
+                same[B].append(A)
+    ans={}
+    for x in nonterms:
+        if x not in ans:
+            ans[x]=set()
+            dfs(same,x,ans[x])
+    print(ans)
+
+def sort_grammar(grammar):
+    for prod in grammar.values():
+        prod['right'].sort()
+
 if __name__ == '__main__':
-    pass
+    a=[Element("X"),Element('"abc"')]
+    for x in a:
+        print(x.type)
+    a.sort()
+    print(a)

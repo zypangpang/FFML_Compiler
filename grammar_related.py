@@ -1,5 +1,6 @@
 from constants import EBNF_OP_SYMBOL, ELE_TYPE, TERM_BEGIN_CHARS,EMPTY
-from global_var import  new_name_gen
+from utils import nonterm_name_generator
+#from global_var import  new_name_gen
 from collections import defaultdict
 
 class Element:
@@ -100,39 +101,42 @@ def get_grammar_from_file(type, file_path,begin_alter,endmark):
     else:
         raise Exception("Invalid grammar file type")
     sort_grammar(grammar)
-    return start_symbol, grammar,nonterms
+    return start_symbol, grammar
 
 
 
-def remove_EBNF_repetition(name_map,elements):
-    new_grammar={}
-    new_elements=[]
-    for ele in elements:
-        # Nested grouping is not supported
-        if ele.type == ELE_TYPE.COMBI:
-
-            symbol_str=" ".join([e.content for e in ele.content]+[ele.op])
-            if symbol_str not in name_map:
-                name_map[symbol_str]=new_name_gen.__next__()
-            new_name = name_map[symbol_str]
-
-            new_grammar[new_name]={'left':new_name,'right':[]}
-            new_rights=new_grammar[new_name]['right']
-            if ele.op == '?':
-                new_rights.append([Element(e.content) for e in ele.content])
-                new_rights.append([Element(EMPTY)])
-            else:
-                if ele.op == '+':
-                    new_elements.extend(ele.content)
-                new_rights.append([Element(e.content) for e in ele.content]+[Element(new_name)] )
-                new_rights.append([Element(EMPTY)])
-            new_elements.append(Element(new_name))
-        else:
-            new_elements.append(ele)
-    return new_elements, new_grammar
 
 
 def EBNF_to_BNF(grammar):
+    new_name_gen = nonterm_name_generator("R_")
+
+    def remove_EBNF_repetition(name_map, elements):
+        new_grammar = {}
+        new_elements = []
+        for ele in elements:
+            # Nested grouping is not supported
+            if ele.type == ELE_TYPE.COMBI:
+
+                symbol_str = " ".join([e.content for e in ele.content] + [ele.op])
+                if symbol_str not in name_map:
+                    name_map[symbol_str] = new_name_gen.__next__()
+                new_name = name_map[symbol_str]
+
+                new_grammar[new_name] = {'left': new_name, 'right': []}
+                new_rights = new_grammar[new_name]['right']
+                if ele.op == '?':
+                    new_rights.append([Element(e.content) for e in ele.content])
+                    new_rights.append([Element(EMPTY)])
+                else:
+                    if ele.op == '+':
+                        new_elements.extend(ele.content)
+                    new_rights.append([Element(e.content) for e in ele.content] + [Element(new_name)])
+                    new_rights.append([Element(EMPTY)])
+                new_elements.append(Element(new_name))
+            else:
+                new_elements.append(ele)
+        return new_elements, new_grammar
+
     grammar_new={}
     name_map={}
     for X in grammar:
@@ -271,6 +275,50 @@ def check_left_recursive(grammar,nullables=None):
         if check_recursive(A, A):
             recursive_nts.add(A)
     return recursive_nts
+
+def left_factoring(grammar):
+    def longest_prefix(rights):
+        n=len(rights)
+        longest_prefix=[]
+        for i in range(n-1):
+            cur_line=rights[i]
+            for j in range(i+1,n):
+                comp_line=rights[j]
+                k=0
+                while k<len(cur_line):
+                    if k>=len(comp_line) or  cur_line[k]!=comp_line[k]:
+                        break
+                    k=k+1
+
+                if k > len(longest_prefix):
+                    longest_prefix=cur_line[:k]
+        return longest_prefix
+
+    new_name_gen = nonterm_name_generator("F_")
+    changed_nts={x for x in grammar}
+    while changed_nts:
+        new_changed=set()
+        new_grammar={}
+        for x in changed_nts:
+            prod=grammar[x]
+            lprefix=longest_prefix(prod['right'])
+            if lprefix:
+                n = len(lprefix)
+                new_changed.add(x)
+                new_name=new_name_gen.__next__()
+                new_grammar[new_name]={'left':new_name,'right':[]}
+                new_rights=[[*lprefix, Element(new_name)]]
+                for line in prod['right']:
+                    if line[:n]==lprefix:
+                        new_grammar[new_name]['right'].append(line[n:] if line[n:] else [Element(EMPTY)])
+                    else:
+                        new_rights.append(line)
+                prod['right']=new_rights
+        changed_nts=new_changed
+        grammar={**grammar,**new_grammar}
+    return grammar
+
+
 
 
 

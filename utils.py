@@ -1,9 +1,9 @@
 from constants import TERM_BEGIN_CHARS,ELE_TYPE
 
-def nonterm_name_generator():
+def nonterm_name_generator(begin_chars):
     now='A'
     while True:
-        yield 'I_'+now
+        yield begin_chars+now
         # add 1
         new=[]
         carry = 1

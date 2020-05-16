@@ -1,7 +1,6 @@
 from constants import EMPTY, ELE_TYPE, ENDMARK
 from grammar_related import Element
 
-
 class FirstFollowSet:
     def __init__(self, grammar, ss):
         self.__has_first=False

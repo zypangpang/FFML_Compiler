@@ -41,29 +41,33 @@ class Element:
         return self.content < other.content
 
 
-def read_EBNF(file_path):
+def read_grammar(file_path, begin_alter, endmark):
     grammar = {}
+    nonterms=[]
+    strip_chars='\n\t '+begin_alter
     with open(file_path, "r") as f:
-        first_line = f.readline().strip()
+        first_line = f.readline().strip(strip_chars)
         start_symbol = first_line
-        line = f.readline()
+        line = f.readline().strip(strip_chars)
         while line:
             left = line.split()[0]
             production = {'left': left, 'right': []}
-            right = f.readline().strip('\n\t |').split()
-            while right[0] not in ';.':
-                production['right'].append(right)
-                right = f.readline().split()
+            nonterms.append(left)
+            right = f.readline().strip(strip_chars).split()
+            while right[0] != endmark:
+                production['right'].append([Element(str) for str in right])
+                right = f.readline().strip(strip_chars).split()
 
             grammar[left] = production
-            line = f.readline()
-    return start_symbol, grammar
+            line = f.readline().strip(strip_chars)
+    return start_symbol, grammar,nonterms
 
 
 def process_right(grammar):
     for _, production in grammar.items():
         new_right = []
         for line in production['right']:
+            line = [e.content for e in line]
             right_elements = []
             line = iter(line)
             item = next(line, None)
@@ -86,31 +90,44 @@ def process_right(grammar):
         production['right'] = new_right
 
 
-def get_grammar_from_file(EBNF_path):
+def get_grammar_from_file(type, file_path,begin_alter,endmark):
     # EBNF_path = "grammar.txt" if len(sys.argv) <= 1 else sys.argv[1]
-    start_symbol, grammar = read_EBNF(EBNF_path)
-    process_right(grammar)
-    return start_symbol, grammar
+    start_symbol, grammar,nonterms = read_grammar(file_path, begin_alter, endmark)
+    if type == 'EBNF':
+        process_right(grammar)
+        grammar=EBNF_to_BNF(grammar)
+    elif type == 'BNF':
+        pass
+    else:
+        raise Exception("Invalid grammar file type")
+    sort_grammar(grammar)
+    return start_symbol, grammar,nonterms
 
 
 
-def remove_EBNF_repetition(elements):
+def remove_EBNF_repetition(name_map,elements):
     new_grammar={}
     new_elements=[]
     for ele in elements:
+        # Nested grouping is not supported
         if ele.type == ELE_TYPE.COMBI:
-            new_name=new_name_gen.__next__()
+
+            symbol_str=" ".join([e.content for e in ele.content]+[ele.op])
+            if symbol_str not in name_map:
+                name_map[symbol_str]=new_name_gen.__next__()
+            new_name = name_map[symbol_str]
+
             new_grammar[new_name]={'left':new_name,'right':[]}
             new_rights=new_grammar[new_name]['right']
-            new_elements.append(Element(new_name))
             if ele.op == '?':
                 new_rights.append([Element(e.content) for e in ele.content])
                 new_rights.append([Element(EMPTY)])
-            elif ele.op == '*':
-                new_rights.append([Element(new_name)]+[Element(e.content) for e in ele.content])
+            else:
+                if ele.op == '+':
+                    new_elements.extend(ele.content)
+                new_rights.append([Element(e.content) for e in ele.content]+[Element(new_name)] )
                 new_rights.append([Element(EMPTY)])
-            elif ele.op == '+':
-                new_rights.append([Element(new_name)]+[Element(e.content) for e in ele.content])
+            new_elements.append(Element(new_name))
         else:
             new_elements.append(ele)
     return new_elements, new_grammar
@@ -118,23 +135,25 @@ def remove_EBNF_repetition(elements):
 
 def EBNF_to_BNF(grammar):
     grammar_new={}
+    name_map={}
     for X in grammar:
         rights=grammar[X]['right']
         new_rights=[]
         for line in rights:
-            new_elements,new_grammar = remove_EBNF_repetition(line)
+            new_elements,new_grammar = remove_EBNF_repetition(name_map,line)
             new_rights.append(new_elements)
             grammar_new={**grammar_new, **new_grammar}
         grammar_new[X]={'left':X,'right':new_rights}
     return grammar_new
 
 def remove_same_symbols(grammar):
-    def dfs(G, name,group):
+    def dfs(G, name,group,visited):
         if name in group:
             return
         group.add(name)
+        visited.add(name)
         for node in G[name]:
-            dfs(G, node, group)
+            dfs(G, node, group,visited)
 
     same=defaultdict(list)
     nonterms=[x for x in grammar]
@@ -147,15 +166,65 @@ def remove_same_symbols(grammar):
                 same[A].append(B)
                 same[B].append(A)
     ans={}
+    visited=set()
     for x in nonterms:
-        if x not in ans:
+        if x not in visited:
             ans[x]=set()
-            dfs(same,x,ans[x])
+            dfs(same,x,ans[x],visited)
     print(ans)
 
 def sort_grammar(grammar):
     for prod in grammar.values():
         prod['right'].sort()
+
+def get_nullable_nonterms(grammar):
+    nullable_nts=set()
+    def is_nullable(element):
+        if element.content == EMPTY:
+            return True
+        if element.type == ELE_TYPE.TERM:
+            return False
+        if element.content in nullable_nts:
+            return True
+        for line in grammar[element.content]['right']:
+            nullable = True
+            for ele in line:
+                if not is_nullable(ele):
+                    nullable=False
+                    break
+            if nullable:
+                nullable_nts.add(element.content)
+                return True
+        return False
+    for x in grammar:
+        if x not in nullable_nts and is_nullable(Element(x)):
+            nullable_nts.add(x)
+    return nullable_nts
+
+
+def remove_empty_productions(grammar,nullable_set):
+    def replace_empty_nt(elements, i, cur_prod:list,res_prods):
+        if i>=len(elements):
+            res_prods.append(cur_prod.copy())
+            return
+        cur_prod.append(elements[i])
+        replace_empty_nt(elements,i+1,cur_prod,res_prods)
+        cur_prod.pop()
+
+        if elements[i].content in nullable_set:
+            replace_empty_nt(elements,i+1,cur_prod,res_prods)
+
+    for prod in grammar.values():
+        rights=prod['right']
+        new_rights=[]
+        for line in rights:
+            cur_prod=[]
+            res_prods=[]
+            if line[0].content != EMPTY:
+                replace_empty_nt(line,0,cur_prod,res_prods)
+                new_rights.extend(res_prods)
+        prod['right']=new_rights
+
 
 if __name__ == '__main__':
     a=[Element("X"),Element('"abc"')]

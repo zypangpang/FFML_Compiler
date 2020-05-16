@@ -1,0 +1,177 @@
+PolicyList
+PolicyList ->
+      PolicyStatement I_A
+    ;
+I_A ->
+      PolicyStatement I_A
+    | #
+    ;
+I_B ->
+      ConditionStatement
+    | #
+    ;
+PolicyStatement ->
+      PolicyId EventStatement I_B ActionStatement ";"
+    ;
+PolicyId ->
+      "POLICYID" "[" String "]"
+    ;
+I_C ->
+      LogicalOr SingleEvent I_C
+    | #
+    ;
+EventStatement ->
+      "ON" SingleEvent I_C
+    ;
+SingleEvent ->
+      Channel EventList
+    ;
+Channel ->
+      "ATM"
+    | "CHQ"
+    | "CNP"
+    | "CP"
+    | "DD"
+    | "ONL"
+    | "OTH"
+    ;
+EventList ->
+      Sequence
+    | "[" Event "]"
+    ;
+I_D ->
+      "(" IntegerLiteral ")"
+    | #
+    ;
+I_E ->
+      "," Event I_E
+    | #
+    ;
+Sequence ->
+      "SEQ" I_D "[" Event "," Event I_E "]"
+    ;
+Instance ->
+      <STRING>
+    ;
+I_F ->
+      LogicalOperator SingleCondition I_F
+    | #
+    ;
+ConditionStatement ->
+      "IF" SingleCondition I_F
+    ;
+LogicalOperator ->
+      LogicalAnd
+    | LogicalOr
+    ;
+SingleCondition ->
+      AdditiveExpression1 Comparison AdditiveExpression1
+    | HistoryStatement Comparison AdditiveExpression1
+    ;
+I_G ->
+      FactorExpression2
+    | #
+    ;
+I_H ->
+      AdditiveExpression2
+    | #
+    ;
+AdditiveExpression1 ->
+      FactorExpression1 I_H
+    | Query I_G I_H
+    ;
+AdditiveExpression2 ->
+      "+" FactorExpression1 I_H
+    | "-" FactorExpression1 I_H
+    ;
+FactorExpression1 ->
+      Factors I_G
+    ;
+FactorExpression2 ->
+      "*" Factors I_G
+    | "/" Factors I_G
+    ;
+Factors ->
+      Boolean
+    | EventParameter
+    | IntegerLiteral
+    | String
+    | "(" AdditiveExpression1 ")"
+    ;
+IntegerLiteral ->
+      <DIGIT>
+    | <DIGIT> "." <DIGIT>
+    ;
+Boolean ->
+      "FALSE"
+    | "TRUE"
+    ;
+String ->
+      "'" <STRING> "'"
+    ;
+Query ->
+      "QUERY" StoredProcedure
+    ;
+StoredProcedure ->
+      Instance "(" Parameters ")"
+    ;
+I_I ->
+      "," ParamInput I_I
+    | #
+    ;
+Parameters ->
+      ParamInput I_I
+    ;
+ParamInput ->
+      ChannelList
+    | EventParameter
+    | IntegerLiteral
+    ;
+I_J ->
+      "," Channel I_J
+    | #
+    ;
+ChannelList ->
+      Channel
+    | "(" Channel I_J ")"
+    ;
+HistoryStatement ->
+      "HISTORY" HistInput
+    ;
+HistInput ->
+      "(" <DIGIT> ")" "[" AdditiveExpression1 Comparison AdditiveExpression1 "]"
+    ;
+I_K ->
+      LogicalAnd Procedure I_K
+    | #
+    ;
+ActionStatement ->
+      "THEN" Procedure I_K
+    ;
+I_L ->
+      Parameters I_L
+    | #
+    ;
+Procedure ->
+      Instance "(" I_L ")"
+    ;
+LogicalAnd ->
+      "AND"
+    ;
+LogicalOr ->
+      "OR"
+    ;
+Comparison ->
+      "!="
+    | "<"
+    | "<="
+    | "="
+    | ">"
+    | ">="
+    ;
+EventParameter ->
+      <STRING>
+    ;
+Event ->
+      <STRING>
+    ;

@@ -1,9 +1,9 @@
-from constants import TERM_BEGIN_CHARS
+from constants import TERM_BEGIN_CHARS,ELE_TYPE
 
 def nonterm_name_generator():
     now='A'
     while True:
-        yield '_'+now
+        yield 'I_'+now
         # add 1
         new=[]
         carry = 1
@@ -31,9 +31,47 @@ def format_print(func, title, table=False):
         print('_' * dash_number)
     return inner_func
 
-def print_set(global_set):
-    for x in global_set:
+def print_set(global_set,key_order=None):
+    if key_order:
+        nts=key_order
+    else:
+        nts=sorted([x for x in global_set])
+    for x in nts:
         if x[0] not in TERM_BEGIN_CHARS:
+            #print(f"{x} \t {sorted([i for i in global_set[x]])}")
             print(f"{x} \t {global_set[x]}")
 
+def output_formatted_grammar(start_symbol, grammar, deduce_symbol, begin_alter, endmark):
+    print(start_symbol)
+    indent="    "
+    for x in grammar:
+        print(f"{x} {deduce_symbol}")
+        first=True
+        for line in grammar[x]['right']:
+            if first:
+                output=indent+"  "
+                first=False
+            else:
+                output=indent+begin_alter+" "
+            output = output + " ".join([e.content for e in line])
+            print(output)
+        print(indent+endmark)
+
+def output_formatted_grammar_online(start_symbol, grammar, deduce_symbol, begin_alter, endmark):
+    print(start_symbol)
+    indent="    "
+    for x in grammar:
+        print(f"{x} {deduce_symbol}")
+        first=True
+        for line in grammar[x]['right']:
+            if first:
+                output=indent+" "
+                first=False
+            else:
+                output=indent+begin_alter+" "
+            for ele in line:
+                content=ele.content.strip('"').lower() if ele.type==ELE_TYPE.TERM else ele.content
+                output=output + f" {content}"
+            print(output)
+        print(indent+endmark)
 

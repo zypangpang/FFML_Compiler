@@ -1,0 +1,129 @@
+PolicyList
+PolicyList ->
+      (PolicyStatement)+
+    ;
+PolicyStatement ->
+      PolicyId EventStatement (ConditionStatement)? ActionStatement ";"
+    ;
+PolicyId ->
+      "POLICYID" "[" String "]"
+    ;
+EventStatement ->
+      "ON" SingleEvent (LogicalOr SingleEvent)*
+    ;
+SingleEvent ->
+      Channel EventList
+    ;
+Channel ->
+      "ATM"
+    | "CHQ"
+    | "CNP"
+    | "CP"
+    | "DD"
+    | "ONL"
+    | "OTH"
+    ;
+EventList ->
+      Sequence
+    | "[" Event "]"
+    ;
+Sequence ->
+      "SEQ" ("(" IntegerLiteral ")")? "[" Event ("," Event)+ "]"
+    ;
+Instance ->
+      <STRING>
+    ;
+ConditionStatement ->
+      "IF" SingleCondition (LogicalOperator SingleCondition)*
+    ;
+LogicalOperator ->
+      LogicalAnd
+    | LogicalOr
+    ;
+SingleCondition ->
+      AdditiveExpression1 Comparison AdditiveExpression1
+    | HistoryStatement Comparison AdditiveExpression1
+    ;
+AdditiveExpression1 ->
+      FactorExpression1 (AdditiveExpression2)?
+    | Query (FactorExpression2)? (AdditiveExpression2)?
+    ;
+AdditiveExpression2 ->
+      "+" FactorExpression1 (AdditiveExpression2)?
+    | "-" FactorExpression1 (AdditiveExpression2)?
+    ;
+FactorExpression1 ->
+      Factors (FactorExpression2)?
+    ;
+FactorExpression2 ->
+      "*" Factors (FactorExpression2)?
+    | "/" Factors (FactorExpression2)?
+    ;
+Factors ->
+      Boolean
+    | EventParameter
+    | IntegerLiteral
+    | String
+    | "(" AdditiveExpression1 ")"
+    ;
+IntegerLiteral ->
+      <DIGIT>
+    | <DIGIT> "." <DIGIT>
+    ;
+Boolean ->
+      "FALSE"
+    | "TRUE"
+    ;
+String ->
+      "'" <STRING> "'"
+    ;
+Query ->
+      "QUERY" StoredProcedure
+    ;
+StoredProcedure ->
+      Instance "(" Parameters ")"
+    ;
+Parameters ->
+      ParamInput ("," ParamInput)*
+    ;
+ParamInput ->
+      ChannelList
+    | EventParameter
+    | IntegerLiteral
+    ;
+ChannelList ->
+      Channel
+    | "(" Channel ("," Channel)* ")"
+    ;
+HistoryStatement ->
+      "HISTORY" HistInput
+    ;
+HistInput ->
+      "(" <DIGIT> ")" "[" AdditiveExpression1 Comparison AdditiveExpression1 "]"
+    ;
+ActionStatement ->
+      "THEN" Procedure (LogicalAnd Procedure)*
+    ;
+Procedure ->
+      Instance "(" (Parameters)* ")"
+    ;
+LogicalAnd ->
+      "AND"
+    ;
+LogicalOr ->
+      "OR"
+    ;
+Comparison ->
+      "!="
+    | "<"
+    | "<="
+    | "="
+    | ">"
+    | ">="
+    ;
+EventParameter ->
+      <STRING>
+    ;
+Event ->
+      <STRING>
+    ;

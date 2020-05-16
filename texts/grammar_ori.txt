@@ -1,6 +1,6 @@
 PolicyList
 PolicyList :
-    (PolicyStatement)*
+    (PolicyStatement)+
 	;
 PolicyStatement :
     PolicyId EventStatement (ConditionStatement)? ActionStatement ";"

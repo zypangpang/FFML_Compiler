@@ -31,15 +31,15 @@ def format_print(func, title, table=False):
         print('_' * dash_number)
     return inner_func
 
-def print_set(global_set,key_order=None):
+def print_dict(my_dict, key_order=None):
     if key_order:
         nts=key_order
     else:
-        nts=sorted([x for x in global_set])
+        nts=sorted([x for x in my_dict])
     for x in nts:
         if x[0] not in TERM_BEGIN_CHARS:
             #print(f"{x} \t {sorted([i for i in global_set[x]])}")
-            print(f"{x} \t {global_set[x]}")
+            print(f"{x} \t {my_dict[x]}")
 
 def output_formatted_grammar(start_symbol, grammar, deduce_symbol, begin_alter, endmark):
     print(start_symbol)

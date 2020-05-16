@@ -1,6 +1,6 @@
 import sys
-from utils import format_print, print_set,output_formatted_grammar
-from grammar_related import get_grammar_from_file, EBNF_to_BNF,remove_same_symbols,sort_grammar,get_nullable_nonterms,remove_empty_productions
+from utils import format_print, print_dict,output_formatted_grammar
+from grammar_related import get_grammar_from_file, EBNF_to_BNF,remove_same_symbols,sort_grammar,get_nullable_nonterms,remove_empty_productions,check_left_recursive
 from first_follow_set import FirstFollowSet
 from constants import EMPTY
 
@@ -50,17 +50,20 @@ if __name__ == '__main__':
     #remove_empty_productions(grammar,nullables)
     #output_formatted_grammar(start_symbol,grammar,'->','|',';')
 
+    rnts = check_left_recursive(grammar)
+    if rnts:
+        print(rnts)
 
 
     #remove_same_symbols(new_grammar)
 
-    ff = FirstFollowSet(grammar=grammar, ss=start_symbol)
-    first_set=ff.first_set()
-    follow_set=ff.follow_set()
+    #ff = FirstFollowSet(grammar=grammar, ss=start_symbol)
+    #first_set=ff.first_set()
+    #follow_set=ff.follow_set()
 
-    format_print(print, "start symbol")(start_symbol)
-    format_print(print_set, "first set", True)(first_set,nonterms)
-    format_print(print_set, "follow set", True)(follow_set,nonterms)
+    #format_print(print, "start symbol")(start_symbol)
+    #format_print(print_set, "first set", True)(first_set,nonterms)
+    #format_print(print_set, "follow set", True)(follow_set,nonterms)
     # print_seperator(print_set, "addto")(global_addto_follow)
 
     #print(check_LL1(ff))

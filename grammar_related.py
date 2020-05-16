@@ -2,7 +2,6 @@ from constants import EBNF_OP_SYMBOL, ELE_TYPE, TERM_BEGIN_CHARS,EMPTY
 from global_var import  new_name_gen
 from collections import defaultdict
 
-
 class Element:
     """The element of grammar production right part"""
 
@@ -177,6 +176,28 @@ def sort_grammar(grammar):
     for prod in grammar.values():
         prod['right'].sort()
 
+def get_nullables(grammar):
+    nullables=set()
+    len1=len(nullables)
+    while True:
+        for prod in grammar.values():
+            A=prod['left']
+            rights = prod['right']
+            for line in rights:
+                null=True
+                for ele in line:
+                    if ele.content != EMPTY and ele.content not in nullables:
+                        null=False
+                        break
+                if null:
+                    nullables.add(A)
+                    break
+        if len(nullables) > len1:
+            len1=len(nullables)
+        else:
+            return nullables
+
+# deprecated. Use get_nullables instead.
 def get_nullable_nonterms(grammar):
     nullable_nts=set()
     def is_nullable(element):
@@ -224,6 +245,33 @@ def remove_empty_productions(grammar,nullable_set):
                 replace_empty_nt(line,0,cur_prod,res_prods)
                 new_rights.extend(res_prods)
         prod['right']=new_rights
+
+
+def check_left_recursive(grammar,nullables=None):
+    def check_recursive(nt, begin):
+        rights = grammar[nt]['right']
+        for line in rights:
+            for ele in line:
+                if ele.type == ELE_TYPE.TERM:
+                    break
+                if ele.content == begin:
+                    return True
+                if check_recursive(ele.content, begin):
+                    return True
+                if ele.content not in nullables:
+                    break
+        return False
+
+    if not nullables:
+        nullables=get_nullables(grammar)
+        print(nullables)
+    recursive_nts=set()
+    #first_nonterms=defaultdict(set)
+    for A in grammar:
+        if check_recursive(A, A):
+            recursive_nts.add(A)
+    return recursive_nts
+
 
 
 if __name__ == '__main__':

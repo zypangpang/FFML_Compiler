@@ -55,7 +55,7 @@ class Production:
 
     def __repr__(self):
         right_str = " ".join([ele.content for ele in self.right_elements])
-        return f"({self.left}->{right_str})"
+        return f"({self.id}:{self.left}->{right_str})"
 
     def __lt__(self, other):
         if not isinstance(other, Production):
@@ -92,7 +92,7 @@ def get_all_productions(grammar):
 
 
 def process_right(grammar):
-    #id_gen=int_id_generator()
+    int_id_gen=int_id_generator()
     grammar_new=defaultdict(list)
     all_productions=get_all_productions(grammar)
     for production in all_productions:
@@ -123,19 +123,17 @@ def process_right(grammar):
 def get_grammar_from_file(type, file_path,begin_alter,endmark):
     # EBNF_path = "grammar.txt" if len(sys.argv) <= 1 else sys.argv[1]
     start_symbol, grammar,nonterms = read_grammar(file_path, begin_alter, endmark)
+    grammar=process_right(grammar)
+
     if type == 'EBNF':
         grammar=EBNF_to_BNF(grammar)
     elif type == 'BNF':
         pass
     else:
         raise Exception("Invalid grammar file type")
-    grammar=process_right(grammar)
 
     sort_grammar(grammar)
     return start_symbol, grammar
-
-
-
 
 
 def EBNF_to_BNF(grammar):
@@ -181,6 +179,7 @@ def EBNF_to_BNF(grammar):
         grammar_new[X]=new_prods
     return grammar_new
 
+# deprecated. Not correct anymore.
 def remove_same_symbols(grammar):
     def dfs(G, name,group,visited):
         if name in group:
@@ -280,34 +279,36 @@ def get_nullable_nonterms(grammar):
 
 
 def remove_empty_productions(grammar,nullable_set):
-    def replace_empty_nt(elements, i, cur_prod:list,res_prods):
+    int_id_gen=int_id_generator()
+    def replace_empty_nt(prod, i, cur_prod:list,res_prods):
+        elements=prod.right_elements
         if i>=len(elements):
-            res_prods.append(cur_prod.copy())
+            res_prods.append(Production(int_id_gen.__next__(),prod.left, cur_prod.copy()))
             return
         cur_prod.append(elements[i])
-        replace_empty_nt(elements,i+1,cur_prod,res_prods)
+        replace_empty_nt(prod,i+1,cur_prod,res_prods)
         cur_prod.pop()
 
         if elements[i].content in nullable_set:
-            replace_empty_nt(elements,i+1,cur_prod,res_prods)
+            replace_empty_nt(prod,i+1,cur_prod,res_prods)
 
-    for prod in grammar.values():
-        rights=prod['right']
-        new_rights=[]
-        for line in rights:
+    for X in grammar:
+        prods=grammar[X]
+        new_prods=[]
+        for prod in prods:
             cur_prod=[]
             res_prods=[]
-            if line[0].content != EMPTY:
-                replace_empty_nt(line,0,cur_prod,res_prods)
-                new_rights.extend(res_prods)
-        prod['right']=new_rights
+            if prod.right_elements[0].content != EMPTY:
+                replace_empty_nt(prod,0,cur_prod,res_prods)
+                new_prods.extend(res_prods)
+        grammar[X]=new_prods
 
 
 def check_left_recursive(grammar,nullables=None):
     def check_recursive(nt, begin):
-        rights = grammar[nt]['right']
-        for line in rights:
-            for ele in line:
+        prods = grammar[nt]
+        for prod in prods:
+            for ele in prod.right_elements:
                 if ele.type == ELE_TYPE.TERM:
                     break
                 if ele.content == begin:
@@ -320,7 +321,7 @@ def check_left_recursive(grammar,nullables=None):
 
     if not nullables:
         nullables=get_nullables(grammar)
-        print(nullables)
+
     recursive_nts=set()
     #first_nonterms=defaultdict(set)
     for A in grammar:
@@ -329,13 +330,13 @@ def check_left_recursive(grammar,nullables=None):
     return recursive_nts
 
 def left_factoring(grammar):
-    def longest_prefix(rights):
-        n=len(rights)
+    def longest_prefix(prods):
+        n=len(prods)
         longest_prefix=[]
         for i in range(n-1):
-            cur_line=rights[i]
+            cur_line=prods[i].right_elements
             for j in range(i+1,n):
-                comp_line=rights[j]
+                comp_line=prods[j].right_elements
                 k=0
                 while k<len(cur_line):
                     if k>=len(comp_line) or  cur_line[k]!=comp_line[k]:
@@ -347,25 +348,27 @@ def left_factoring(grammar):
         return longest_prefix
 
     new_name_gen = nonterm_name_generator("F_")
-    changed_nts={x for x in grammar}
+    changed_nts=set(grammar.keys())
     while changed_nts:
         new_changed=set()
         new_grammar={}
         for x in changed_nts:
-            prod=grammar[x]
-            lprefix=longest_prefix(prod['right'])
+            prods=grammar[x]
+            lprefix=longest_prefix(prods)
             if lprefix:
                 n = len(lprefix)
                 new_changed.add(x)
                 new_name=new_name_gen.__next__()
-                new_grammar[new_name]={'left':new_name,'right':[]}
-                new_rights=[[*lprefix, Element(new_name)]]
-                for line in prod['right']:
+                new_grammar[new_name]=[]
+                new_prods=[Production(int_id_gen.__next__(),new_name,[*lprefix, Element(new_name)])]
+                for prod in prods:
+                    line=prod.right_elements
                     if line[:n]==lprefix:
-                        new_grammar[new_name]['right'].append(line[n:] if line[n:] else [Element(EMPTY)])
+                        new_grammar[new_name].append(Production(int_id_gen.__next__(),new_name,
+                                                                line[n:] if line[n:] else [Element(EMPTY)]))
                     else:
-                        new_rights.append(line)
-                prod['right']=new_rights
+                        new_prods.append(prod)
+                grammar[x]=new_prods
         changed_nts=new_changed
         grammar={**grammar,**new_grammar}
     return grammar

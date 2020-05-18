@@ -40,7 +40,8 @@ def print_dict(my_dict, key_order=None):
     if key_order:
         nts=key_order
     else:
-        nts=sorted([x for x in my_dict])
+        #nts=sorted([x for x in my_dict])
+        nts = [x for x in my_dict]
     for x in nts:
         if x[0] not in TERM_BEGIN_CHARS:
             #print(f"{x} \t {sorted([i for i in global_set[x]])}")
@@ -52,7 +53,8 @@ def output_formatted_grammar(start_symbol, grammar, deduce_symbol, begin_alter, 
     for x in grammar:
         print(f"{x} {deduce_symbol}")
         first=True
-        for line in grammar[x]['right']:
+        for line in grammar[x]:
+            line=line.right_elements
             if first:
                 output=indent+"  "
                 first=False

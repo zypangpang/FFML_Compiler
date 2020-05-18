@@ -292,6 +292,7 @@ def remove_empty_productions(grammar,nullable_set):
         if elements[i].content in nullable_set:
             replace_empty_nt(prod,i+1,cur_prod,res_prods)
 
+    new_grammar={}
     for X in grammar:
         prods=grammar[X]
         new_prods=[]
@@ -301,7 +302,9 @@ def remove_empty_productions(grammar,nullable_set):
             if prod.right_elements[0].content != EMPTY:
                 replace_empty_nt(prod,0,cur_prod,res_prods)
                 new_prods.extend(res_prods)
-        grammar[X]=new_prods
+        if new_prods:
+            new_grammar[X]=new_prods
+    return  new_grammar
 
 
 def check_left_recursive(grammar,nullables=None):
@@ -360,7 +363,7 @@ def left_factoring(grammar):
                 new_changed.add(x)
                 new_name=new_name_gen.__next__()
                 new_grammar[new_name]=[]
-                new_prods=[Production(int_id_gen.__next__(),new_name,[*lprefix, Element(new_name)])]
+                new_prods=[Production(int_id_gen.__next__(),x,[*lprefix, Element(new_name)])]
                 for prod in prods:
                     line=prod.right_elements
                     if line[:n]==lprefix:

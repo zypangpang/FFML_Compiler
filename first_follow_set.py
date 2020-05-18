@@ -1,5 +1,5 @@
 from constants import EMPTY, ELE_TYPE, ENDMARK
-from grammar_related import Element
+from grammar_related import Element,get_all_productions
 from utils import prod_to_str
 
 class FirstFollowSet:
@@ -26,10 +26,10 @@ class FirstFollowSet:
         return fset
 
     def nonterminal_first_set(self, left):
-        productions = self.__grammar[left]['right']
+        productions = self.__grammar[left]
         fset = set()
-        for line in productions:
-            fset.update(self.elements_first_set(line))
+        for prod in productions:
+            fset.update(self.elements_first_set(prod.right_elements))
         return fset
 
     '''
@@ -108,17 +108,16 @@ class FirstFollowSet:
 
 
     def get_rule1_followset(self):
-        productions = self.__grammar.values()
-        for prod in productions:
-            for line in prod['right']:
-                self.followset_rule_1(line)
+        #productions = self.__grammar.values()
+        all_prods=get_all_productions(self.__grammar)
+        for prod in all_prods:
+            self.followset_rule_1(prod.right_elements)
 
     def get_addto_followset(self):
-        productions = self.__grammar.values()
-        for prod in productions:
-            A = prod['left']
-            for line in prod['right']:
-                self.followset_rule_2(A, line)
+        all_prods = get_all_productions(self.__grammar)
+        for prod in all_prods:
+            self.followset_rule_2(prod.left, prod.right_elements)
+
 
     def followset_add(self, A, B, addto_dict):
         len1 = len(self.__follow_set[B])
@@ -167,7 +166,6 @@ class FirstFollowSet:
             self.first_set()
         if not self.__has_follow:
             self.follow_set()
-        for prod in self.__grammar.values():
-            left=prod['left']
-            for line in prod['right']:
-                print(prod_to_str(left,line))
+        all_prods=get_all_productions(self.__grammar)
+        for prod in all_prods:
+            left=prod.left

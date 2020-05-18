@@ -4,7 +4,7 @@ from constants import EBNF_OP_SYMBOL, ELE_TYPE, TERM_BEGIN_CHARS,EMPTY
 from utils import nonterm_name_generator,int_id_generator
 #from global_var import  new_name_gen
 from collections import defaultdict
-from global_var import int_id_gen
+#from global_var import global_int_id_gen
 class Element:
     """The element of grammar production right part"""
 
@@ -64,6 +64,25 @@ class Production:
         return self.right_elements<other.right_elements
 
 
+'''
+class Grammar:
+    def __init__(self,ss,grammar):
+        self.start_symbol=ss
+        self.grammar=grammar
+
+        self.production_map={}
+        for x in grammar:
+            for prod in grammar[x]:
+                self.production_map[prod.id]=prod
+'''
+
+def get_production_map(grammar):
+    production_map={}
+    for x in grammar:
+        for prod in grammar[x]:
+            production_map[prod.id] = prod
+    return production_map
+
 def read_grammar(file_path, begin_alter, endmark):
     grammar = {}
     nonterms=[]
@@ -93,6 +112,7 @@ def get_all_productions(grammar):
 
 def process_right(grammar):
     int_id_gen=int_id_generator()
+
     grammar_new=defaultdict(list)
     all_productions=get_all_productions(grammar)
     for production in all_productions:
@@ -137,6 +157,7 @@ def get_grammar_from_file(type, file_path,begin_alter,endmark):
 
 
 def EBNF_to_BNF(grammar):
+    int_id_gen=int_id_generator()
     new_name_gen = nonterm_name_generator("R_")
 
     def remove_EBNF_repetition(name_map, elements):
@@ -280,6 +301,7 @@ def get_nullable_nonterms(grammar):
 
 def remove_empty_productions(grammar,nullable_set):
     int_id_gen=int_id_generator()
+
     def replace_empty_nt(prod, i, cur_prod:list,res_prods):
         elements=prod.right_elements
         if i>=len(elements):
@@ -333,6 +355,9 @@ def check_left_recursive(grammar,nullables=None):
     return recursive_nts
 
 def left_factoring(grammar):
+    max_id=max([prod.id for prod in get_all_productions(grammar)])
+    int_id_gen = int_id_generator(max_id+1)
+
     def longest_prefix(prods):
         n=len(prods)
         longest_prefix=[]

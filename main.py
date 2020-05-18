@@ -1,6 +1,6 @@
 import sys
 from utils import format_print, print_dict,output_formatted_grammar
-from grammar_related import get_grammar_from_file, EBNF_to_BNF,remove_same_symbols,sort_grammar,get_nullables,remove_empty_productions,check_left_recursive,left_factoring
+from grammar_related import get_grammar_from_file ,left_factoring,get_production_map
 from first_follow_set import FirstFollowSet
 from constants import EMPTY
 
@@ -71,9 +71,16 @@ if __name__ == '__main__':
     #format_print(print_dict, "follow set", True)(follow_set)
     # print_seperator(print_set, "addto")(global_addto_follow)
 
-    ff.get_parse_table()
+    M=ff.get_parse_table(False)
+    p_map=get_production_map(grammar)
+    for X in M:
+        print(f"{X}:")
+        for a in M[X]:
+            print(f"    {a}:")
+            for p in M[X][a]:
+                print(f"        {p_map[p]}")
 
-    print(check_LL1(ff))
+    #print(check_LL1(ff))
     #check_nullable(ff)
 
 

@@ -1,6 +1,7 @@
 from constants import EMPTY, ELE_TYPE, ENDMARK
 from grammar_related import Element,get_all_productions
 from utils import prod_to_str
+from collections import defaultdict
 
 class FirstFollowSet:
     def __init__(self, grammar, ss):
@@ -11,6 +12,10 @@ class FirstFollowSet:
         self.__grammar = grammar
         self.__addto_follow = {}
         self.__start_symbol = ss
+        #self.__production_map={}
+        #for x in grammar:
+        #    for prod in grammar[x]:
+        #        self.__production_map[prod.id] = prod
 
     def elements_first_set(self, elements):
         fset = set()
@@ -161,11 +166,30 @@ class FirstFollowSet:
     def get_grammar(self):
         return self.__grammar
 
-    def get_parse_table(self):
+    def get_parse_table(self,isLL1):
+        def set_item(A,a,id):
+            if isLL1:
+                parse_table[A][a]=id
+            else:
+                if a not in parse_table[A]:
+                    parse_table[A][a]=set()
+                parse_table[A][a].add(id)
+
+        parse_table=defaultdict(dict)
         if not self.__has_first:
             self.first_set()
         if not self.__has_follow:
             self.follow_set()
         all_prods=get_all_productions(self.__grammar)
         for prod in all_prods:
-            left=prod.left
+            A=prod.left
+            first_alpha=self.elements_first_set(prod.right_elements)
+            follow_A=self.__follow_set[A]
+            for a in first_alpha-{EMPTY}:
+                set_item(A,a,prod.id)
+            if EMPTY in first_alpha:
+                for b in follow_A:
+                    set_item(A,b,prod.id)
+            if EMPTY in first_alpha and ENDMARK in follow_A:
+                set_item(A,ENDMARK,prod.id)
+        return parse_table

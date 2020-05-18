@@ -18,6 +18,11 @@ def nonterm_name_generator(begin_chars):
             new.append(chr(ord('A')-1+carry))
         now=''.join(reversed(new))
 
+def int_id_generator(begin=0):
+    while True:
+        yield begin
+        begin=begin+1
+
 def format_print(func, title, table=False):
     dash_number=70
     def inner_func(*args,**kwargs):
@@ -75,3 +80,6 @@ def output_formatted_grammar_online(start_symbol, grammar, deduce_symbol, begin_
             print(output)
         print(indent+endmark)
 
+def prod_to_str(left,right):
+    right_str=" ".join([ele.content for ele in right])
+    return f"{left}->{right_str}"

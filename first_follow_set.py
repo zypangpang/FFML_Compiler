@@ -1,5 +1,6 @@
 from constants import EMPTY, ELE_TYPE, ENDMARK
 from grammar_related import Element
+from utils import prod_to_str
 
 class FirstFollowSet:
     def __init__(self, grammar, ss):
@@ -160,3 +161,13 @@ class FirstFollowSet:
 
     def get_grammar(self):
         return self.__grammar
+
+    def get_parse_table(self):
+        if not self.__has_first:
+            self.first_set()
+        if not self.__has_follow:
+            self.follow_set()
+        for prod in self.__grammar.values():
+            left=prod['left']
+            for line in prod['right']:
+                print(prod_to_str(left,line))

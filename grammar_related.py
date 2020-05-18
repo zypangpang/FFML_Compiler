@@ -1,8 +1,10 @@
+from functools import reduce
+
 from constants import EBNF_OP_SYMBOL, ELE_TYPE, TERM_BEGIN_CHARS,EMPTY
-from utils import nonterm_name_generator
+from utils import nonterm_name_generator,int_id_generator
 #from global_var import  new_name_gen
 from collections import defaultdict
-
+from global_var import int_id_gen
 class Element:
     """The element of grammar production right part"""
 
@@ -41,6 +43,27 @@ class Element:
         return self.content < other.content
 
 
+class Production:
+    def __init__(self,id:int,left:str,elements:list):
+        self.id=id
+        self.left=left
+        self.right_elements=elements
+
+    def __str__(self):
+        right_str = " ".join([ele.content for ele in self.right_elements])
+        return f"{self.left}->{right_str}"
+
+    def __repr__(self):
+        right_str = " ".join([ele.content for ele in self.right_elements])
+        return f"({self.left}->{right_str})"
+
+    def __lt__(self, other):
+        if not isinstance(other, Production):
+           # don't attempt to compare against unrelated types
+            return NotImplemented
+        return self.right_elements<other.right_elements
+
+
 def read_grammar(file_path, begin_alter, endmark):
     grammar = {}
     nonterms=[]
@@ -51,55 +74,63 @@ def read_grammar(file_path, begin_alter, endmark):
         line = f.readline().strip(strip_chars)
         while line:
             left = line.split()[0]
-            production = {'left': left, 'right': []}
+            #production = {'left': left, 'right': []}
+            productions=[]
             nonterms.append(left)
             right = f.readline().strip(strip_chars).split()
             while right[0] != endmark:
-                production['right'].append([Element(str) for str in right])
+                productions.append({'left':left,'right':right})
                 right = f.readline().strip(strip_chars).split()
 
-            grammar[left] = production
+            grammar[left] = productions
             line = f.readline().strip(strip_chars)
     return start_symbol, grammar,nonterms
 
 
+def get_all_productions(grammar):
+    return reduce(lambda prev, next: prev + next, grammar.values())
+
+
 def process_right(grammar):
-    for _, production in grammar.items():
-        new_right = []
-        for line in production['right']:
-            line = [e.content for e in line]
-            right_elements = []
-            line = iter(line)
+    #id_gen=int_id_generator()
+    grammar_new=defaultdict(list)
+    all_productions=get_all_productions(grammar)
+    for production in all_productions:
+        left=production['left']
+        line=production['right']
+        right_elements=[]
+        line = iter(line)
+        item = next(line, None)
+        while item:
+            if item[0] == '(':
+                item = item[1:]
+                symbols = []
+                while item:
+                    if item[-1] in EBNF_OP_SYMBOL:
+                        symbols.append(Element(item[:-2]))
+                        break
+                    else:
+                        symbols.append(Element(item))
+                    item = next(line, None)
+                right_elements.append(Element(symbols, item[-1]))
+            else:
+                right_elements.append(Element(item))
             item = next(line, None)
-            while item:
-                if item[0] == '(':
-                    item = item[1:]
-                    symbols = []
-                    while item:
-                        if item[-1] in EBNF_OP_SYMBOL:
-                            symbols.append(Element(item[:-2]))
-                            break
-                        else:
-                            symbols.append(Element(item))
-                        item = next(line, None)
-                    right_elements.append(Element(symbols, item[-1]))
-                else:
-                    right_elements.append(Element(item))
-                item = next(line, None)
-            new_right.append(right_elements)
-        production['right'] = new_right
+        grammar_new[left].append(Production(int_id_gen.__next__(),left,right_elements))
+    return grammar_new
 
 
 def get_grammar_from_file(type, file_path,begin_alter,endmark):
     # EBNF_path = "grammar.txt" if len(sys.argv) <= 1 else sys.argv[1]
     start_symbol, grammar,nonterms = read_grammar(file_path, begin_alter, endmark)
     if type == 'EBNF':
-        process_right(grammar)
         grammar=EBNF_to_BNF(grammar)
     elif type == 'BNF':
         pass
     else:
         raise Exception("Invalid grammar file type")
+    grammar=process_right(grammar)
+
     sort_grammar(grammar)
     return start_symbol, grammar
 
@@ -122,16 +153,17 @@ def EBNF_to_BNF(grammar):
                     name_map[symbol_str] = new_name_gen.__next__()
                 new_name = name_map[symbol_str]
 
-                new_grammar[new_name] = {'left': new_name, 'right': []}
-                new_rights = new_grammar[new_name]['right']
+                #new_grammar[new_name] = {'left': new_name, 'right': []}
+                new_grammar[new_name] = []
+                new_rights = new_grammar[new_name]
                 if ele.op == '?':
-                    new_rights.append([Element(e.content) for e in ele.content])
-                    new_rights.append([Element(EMPTY)])
+                    new_rights.append(Production(int_id_gen.__next__(), new_name,[Element(e.content) for e in ele.content]))
+                    new_rights.append(Production(int_id_gen.__next__(),new_name,[Element(EMPTY)]))
                 else:
                     if ele.op == '+':
                         new_elements.extend(ele.content)
-                    new_rights.append([Element(e.content) for e in ele.content] + [Element(new_name)])
-                    new_rights.append([Element(EMPTY)])
+                    new_rights.append(Production(int_id_gen.__next__(),new_name,[Element(e.content) for e in ele.content] + [Element(new_name)]))
+                    new_rights.append(Production(int_id_gen.__next__(),new_name,[Element(EMPTY)]))
                 new_elements.append(Element(new_name))
             else:
                 new_elements.append(ele)
@@ -140,13 +172,13 @@ def EBNF_to_BNF(grammar):
     grammar_new={}
     name_map={}
     for X in grammar:
-        rights=grammar[X]['right']
-        new_rights=[]
-        for line in rights:
-            new_elements,new_grammar = remove_EBNF_repetition(name_map,line)
-            new_rights.append(new_elements)
+        prods=grammar[X]
+        new_prods=[]
+        for prod in prods:
+            new_elements,new_grammar = remove_EBNF_repetition(name_map,prod.right_elements)
+            new_prods.append(Production(int_id_gen.__next__(),X,new_elements))
             grammar_new={**grammar_new, **new_grammar}
-        grammar_new[X]={'left':X,'right':new_rights}
+        grammar_new[X]=new_prods
     return grammar_new
 
 def remove_same_symbols(grammar):
@@ -177,9 +209,28 @@ def remove_same_symbols(grammar):
     print(ans)
 
 def sort_grammar(grammar):
-    for prod in grammar.values():
-        prod['right'].sort()
+    for prods in grammar.values():
+        prods.sort()
 
+
+def get_nullables(grammar):
+    nullables = set()
+    len1 = len(nullables)
+    all_prods=get_all_productions(grammar)
+    while True:
+        for prod in all_prods:
+            null = True
+            for ele in prod.right_elements:
+                if ele.content != EMPTY and ele.content not in nullables:
+                    null = False
+                    break
+            if null:
+                nullables.add(prod.left)
+        if len(nullables) > len1:
+            len1 = len(nullables)
+        else:
+            return nullables
+'''
 def get_nullables(grammar):
     nullables=set()
     len1=len(nullables)
@@ -200,6 +251,7 @@ def get_nullables(grammar):
             len1=len(nullables)
         else:
             return nullables
+'''
 
 # deprecated. Use get_nullables instead.
 def get_nullable_nonterms(grammar):

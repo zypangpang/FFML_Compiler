@@ -1,0 +1,215 @@
+<html><link type="text/css" id="dark-mode" rel="stylesheet" href=""><style type="text/css" id="dark-mode-custom-style"></style><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<link href="firstFollowSet_files/default.css" title="default" rel="stylesheet" type="text/css">
+<title>Vital Statistics</title>
+</head>
+<body>
+
+<table><tbody><tr><td valign="top">
+<table class="grammar"><caption class="grammar"><a target="_top" href="https://smlweb.cpsc.ucalgary.ca/raw-grammar.php?grammar=%0A%0APolicyList+-%3E+PolicyStatement+I_A+.%0A%0AI_A+-%3E+PolicyStatement+I_A+%0A++++++%7C.%0A%0AI_B+-%3E+ConditionStatement+%0A++++++%7C.%0A%0APolicyStatement+-%3E+PolicyId+EventStatement+I_B+ActionStatement+%3B+.%0A%0APolicyId+-%3E+policyid+%40+String+%3F+.%0A%0AI_C+-%3E+LogicalOr+SingleEvent+I_C+%0A++++++%7C.%0A%0AEventStatement+-%3E+on+SingleEvent+I_C+.%0A%0ASingleEvent+-%3E+Channel+EventList+.%0A%0AChannel+-%3E+atm+%0A++++++++++%7Cchq+%0A++++++++++%7Ccnp+%0A++++++++++%7Ccp+%0A++++++++++%7Cdd+%0A++++++++++%7Conl+%0A++++++++++%7Coth+.%0A%0AEventList+-%3E+Sequence+%0A++++++++++++%7C%40+Event+%3F+.%0A%0AI_D+-%3E+%28+IntegerLiteral+%29+%0A++++++%7C.%0A%0AI_E+-%3E+%3B+Event+I_E+%0A++++++%7C.%0A%0ASequence+-%3E+seq+I_D+%40+Event+%3B+Event+I_E+%3F+.%0A%0AInstance+-%3E+string+.%0A%0AI_F+-%3E+LogicalOperator+SingleCondition+I_F+%0A++++++%7C.%0A%0AConditionStatement+-%3E+if+SingleCondition+I_F+.%0A%0ALogicalOperator+-%3E+LogicalAnd+%0A++++++++++++++++++%7CLogicalOr+.%0A%0ASingleCondition+-%3E+AdditiveExpression1+Comparison+AdditiveExpression1+%0A++++++++++++++++++%7CHistoryStatement+Comparison+AdditiveExpression1+.%0A%0AI_G+-%3E+FactorExpression2+%0A++++++%7C.%0A%0AI_H+-%3E+AdditiveExpression2+%0A++++++%7C.%0A%0AAdditiveExpression1+-%3E+FactorExpression1+I_H+%0A++++++++++++++++++++++%7CQuery+I_G+I_H+.%0A%0AAdditiveExpression2+-%3E+%2B+FactorExpression1+I_H+%0A++++++++++++++++++++++%7C_+FactorExpression1+I_H+.%0A%0AFactorExpression1+-%3E+Factors+I_G+.%0A%0AFactorExpression2+-%3E+%2A+Factors+I_G+%0A++++++++++++++++++++%7C%2F+Factors+I_G+.%0A%0AFactors+-%3E+Boolean+%0A++++++++++%7CEventParameter+%0A++++++++++%7CIntegerLiteral+%0A++++++++++%7CString+%0A++++++++++%7C%28+AdditiveExpression1+%29+.%0A%0AIntegerLiteral+-%3E+digit+Fdigit+.%0A%0AFdigit+-%3E+%0A+++++++++%7C%3A+digit+.%0A%0ABoolean+-%3E+false+%0A++++++++++%7Ctrue+.%0A%0AString+-%3E+%27+string+%27+.%0A%0AQuery+-%3E+query+StoredProcedure+.%0A%0AStoredProcedure+-%3E+Instance+%28+Parameters+%29+.%0A%0AI_I+-%3E+%3B+ParamInput+I_I+%0A++++++%7C.%0A%0AParameters+-%3E+ParamInput+I_I+.%0A%0AParamInput+-%3E+ChannelList+%0A+++++++++++++%7CEventParameter+%0A+++++++++++++%7CIntegerLiteral+.%0A%0AI_J+-%3E+%3B+Channel+I_J+%0A++++++%7C.%0A%0AChannelList+-%3E+Channel+%0A++++++++++++++%7C%28+Channel+I_J+%29+.%0A%0AHistoryStatement+-%3E+history+HistInput+.%0A%0AHistInput+-%3E+%28+digit+%29+%40+AdditiveExpression1+Comparison+AdditiveExpression1+%3F+.%0A%0AI_K+-%3E+LogicalAnd+Procedure+I_K+%0A++++++%7C.%0A%0AActionStatement+-%3E+then+Procedure+I_K+.%0A%0AI_L+-%3E+Parameters+I_L+%0A++++++%7C.%0A%0AProcedure+-%3E+Instance+%28+I_L+%29+.%0A%0ALogicalAnd+-%3E+and+.%0A%0ALogicalOr+-%3E+or+.%0A%0AComparison+-%3E+%21%7E+%0A+++++++++++++%7C%27+%0A+++++++++++++%7C%27%7E+%0A+++++++++++++%7C%7E+%0A+++++++++++++%7C%23+%0A+++++++++++++%7C%23%7E+.%0A%0AEventParameter+-%3E+string+.%0A%0AEvent+-%3E+string+.%0A%0A&amp;substs=%0A">Grammar</a></caption><tbody><tr><td>
+
+
+PolicyList →</td><td> PolicyStatement I_A .</td></tr><tr><td>
+
+I_A →</td><td> PolicyStatement I_A 
+      </td></tr><tr><td align="right">|</td><td>.</td></tr><tr><td>
+
+I_B →</td><td> ConditionStatement 
+      </td></tr><tr><td align="right">|</td><td>.</td></tr><tr><td>
+
+PolicyStatement →</td><td> PolicyId EventStatement I_B ActionStatement ; .</td></tr><tr><td>
+
+PolicyId →</td><td> policyid @ String ? .</td></tr><tr><td>
+
+I_C →</td><td> LogicalOr SingleEvent I_C 
+      </td></tr><tr><td align="right">|</td><td>.</td></tr><tr><td>
+
+EventStatement →</td><td> on SingleEvent I_C .</td></tr><tr><td>
+
+SingleEvent →</td><td> Channel EventList .</td></tr><tr><td>
+
+Channel →</td><td> atm 
+          </td></tr><tr><td align="right">|</td><td>chq 
+          </td></tr><tr><td align="right">|</td><td>cnp 
+          </td></tr><tr><td align="right">|</td><td>cp 
+          </td></tr><tr><td align="right">|</td><td>dd 
+          </td></tr><tr><td align="right">|</td><td>onl 
+          </td></tr><tr><td align="right">|</td><td>oth .</td></tr><tr><td>
+
+EventList →</td><td> Sequence 
+            </td></tr><tr><td align="right">|</td><td>@ Event ? .</td></tr><tr><td>
+
+I_D →</td><td> ( IntegerLiteral ) 
+      </td></tr><tr><td align="right">|</td><td>.</td></tr><tr><td>
+
+I_E →</td><td> ; Event I_E 
+      </td></tr><tr><td align="right">|</td><td>.</td></tr><tr><td>
+
+Sequence →</td><td> seq I_D @ Event ; Event I_E ? .</td></tr><tr><td>
+
+Instance →</td><td> string .</td></tr><tr><td>
+
+I_F →</td><td> LogicalOperator SingleCondition I_F 
+      </td></tr><tr><td align="right">|</td><td>.</td></tr><tr><td>
+
+ConditionStatement →</td><td> if SingleCondition I_F .</td></tr><tr><td>
+
+LogicalOperator →</td><td> LogicalAnd 
+                  </td></tr><tr><td align="right">|</td><td>LogicalOr .</td></tr><tr><td>
+
+SingleCondition →</td><td> AdditiveExpression1 Comparison AdditiveExpression1 
+                  </td></tr><tr><td align="right">|</td><td>HistoryStatement Comparison AdditiveExpression1 .</td></tr><tr><td>
+
+I_G →</td><td> FactorExpression2 
+      </td></tr><tr><td align="right">|</td><td>.</td></tr><tr><td>
+
+I_H →</td><td> AdditiveExpression2 
+      </td></tr><tr><td align="right">|</td><td>.</td></tr><tr><td>
+
+AdditiveExpression1 →</td><td> FactorExpression1 I_H 
+                      </td></tr><tr><td align="right">|</td><td>Query I_G I_H .</td></tr><tr><td>
+
+AdditiveExpression2 →</td><td> + FactorExpression1 I_H 
+                      </td></tr><tr><td align="right">|</td><td>_ FactorExpression1 I_H .</td></tr><tr><td>
+
+FactorExpression1 →</td><td> Factors I_G .</td></tr><tr><td>
+
+FactorExpression2 →</td><td> * Factors I_G 
+                    </td></tr><tr><td align="right">|</td><td>/ Factors I_G .</td></tr><tr><td>
+
+Factors →</td><td> Boolean 
+          </td></tr><tr><td align="right">|</td><td>EventParameter 
+          </td></tr><tr><td align="right">|</td><td>IntegerLiteral 
+          </td></tr><tr><td align="right">|</td><td>String 
+          </td></tr><tr><td align="right">|</td><td>( AdditiveExpression1 ) .</td></tr><tr><td>
+
+IntegerLiteral →</td><td> digit Fdigit .</td></tr><tr><td>
+
+Fdigit →</td><td> 
+         </td></tr><tr><td align="right">|</td><td>: digit .</td></tr><tr><td>
+
+Boolean →</td><td> false 
+          </td></tr><tr><td align="right">|</td><td>true .</td></tr><tr><td>
+
+String →</td><td> ' string ' .</td></tr><tr><td>
+
+Query →</td><td> query StoredProcedure .</td></tr><tr><td>
+
+StoredProcedure →</td><td> Instance ( Parameters ) .</td></tr><tr><td>
+
+I_I →</td><td> ; ParamInput I_I 
+      </td></tr><tr><td align="right">|</td><td>.</td></tr><tr><td>
+
+Parameters →</td><td> ParamInput I_I .</td></tr><tr><td>
+
+ParamInput →</td><td> ChannelList 
+             </td></tr><tr><td align="right">|</td><td>EventParameter 
+             </td></tr><tr><td align="right">|</td><td>IntegerLiteral .</td></tr><tr><td>
+
+I_J →</td><td> ; Channel I_J 
+      </td></tr><tr><td align="right">|</td><td>.</td></tr><tr><td>
+
+ChannelList →</td><td> Channel 
+              </td></tr><tr><td align="right">|</td><td>( Channel I_J ) .</td></tr><tr><td>
+
+HistoryStatement →</td><td> history HistInput .</td></tr><tr><td>
+
+HistInput →</td><td> ( digit ) @ AdditiveExpression1 Comparison AdditiveExpression1 ? .</td></tr><tr><td>
+
+I_K →</td><td> LogicalAnd Procedure I_K 
+      </td></tr><tr><td align="right">|</td><td>.</td></tr><tr><td>
+
+ActionStatement →</td><td> then Procedure I_K .</td></tr><tr><td>
+
+I_L →</td><td> Parameters I_L 
+      </td></tr><tr><td align="right">|</td><td>.</td></tr><tr><td>
+
+Procedure →</td><td> Instance ( I_L ) .</td></tr><tr><td>
+
+LogicalAnd →</td><td> and .</td></tr><tr><td>
+
+LogicalOr →</td><td> or .</td></tr><tr><td>
+
+Comparison →</td><td> !~ 
+             </td></tr><tr><td align="right">|</td><td>' 
+             </td></tr><tr><td align="right">|</td><td>'~ 
+             </td></tr><tr><td align="right">|</td><td>~ 
+             </td></tr><tr><td align="right">|</td><td># 
+             </td></tr><tr><td align="right">|</td><td>#~ .</td></tr><tr><td>
+
+EventParameter →</td><td> string .</td></tr><tr><td>
+
+Event →</td><td> string .</td></tr><tr><td>
+
+</td></tr></tbody></table></td><td valign="top">
+Some sentences generated by this grammar: {<term>policyid @ ' string ' ? on cp @ string ? then string ( ) ;</term>, <term>policyid @ ' string ' ? on dd @ string ? then string ( ) ;</term>, <term>policyid @ ' string ' ? on cnp @ string ? then string ( ) ;</term>, <term>policyid @ ' string ' ? on onl @ string ? then string ( ) ;</term>, <term>policyid @ ' string ' ? on chq @ string ? then string ( ) ;</term>, <term>policyid @ ' string ' ? on oth @ string ? then string ( ) ;</term>, <term>policyid @ ' string ' ? on atm @ string ? then string ( ) ;</term>, <term>policyid @ ' string ' ? on cp seq @ string ; string ? then string ( ) ;</term>, <term>policyid @ ' string ' ? on dd seq @ string ; string ? then string ( ) ;</term>, <term>policyid @ ' string ' ? on cnp seq @ string ; string ? then string ( ) ;</term>, <term>policyid @ ' string ' ? on onl seq @ string ; string ? then string ( ) ;</term>, <term>policyid @ ' string ' ? on chq seq @ string ; string ? then string ( ) ;</term>, <term>policyid @ ' string ' ? on oth seq @ string ; string ? then string ( ) ;</term>, <term>policyid @ ' string ' ? on atm seq @ string ; string ? then string ( ) ;</term>, <term>policyid @ ' string ' ? on cp @ string ? then string ( ) and string ( ) ;</term>, <term>policyid @ ' string ' ? on dd @ string ? then string ( ) and string ( ) ;</term>, <term>policyid @ ' string ' ? on chq @ string ? then string ( ) and string ( ) ;</term>, <term>policyid @ ' string ' ? on cnp @ string ? then string ( ) and string ( ) ;</term>, <term>policyid @ ' string ' ? on atm @ string ? then string ( ) and string ( ) ;</term>, <term>policyid @ ' string ' ? on onl @ string ? then string ( ) and string ( ) ;</term>}</td></tr></tbody></table>
+<ul><li>All nonterminals are reachable and realizable.
+
+</li><li>The nullable nonterminals are:  <nonterm>I_A</nonterm> <nonterm>I_B</nonterm> <nonterm>I_C</nonterm> <nonterm>I_D</nonterm> <nonterm>I_E</nonterm> <nonterm>I_F</nonterm> <nonterm>I_G</nonterm> <nonterm>I_H</nonterm> <nonterm>Fdigit</nonterm> <nonterm>I_I</nonterm> <nonterm>I_J</nonterm> <nonterm>I_K</nonterm> <nonterm>I_L</nonterm>.
+</li><li>The endable nonterminals are:  <nonterm>PolicyList</nonterm> <nonterm>I_A</nonterm> <nonterm>PolicyStatement</nonterm>.
+</li><li>No cycles.
+</li></ul><table class="stats" border="1">
+<tbody><tr><th>nonterminal</th><th>first set</th><th>follow set</th>
+<th>nullable</th><th>endable</th></tr>
+<tr><td><nonterm>PolicyList</nonterm></td><td> <nonterm>policyid</nonterm></td><td><special>∅</special></td><td>no</td><td>yes</td></tr>
+<tr><td><nonterm>I_A</nonterm></td><td> <nonterm>policyid</nonterm></td><td><special>∅</special></td><td>yes</td><td>yes</td></tr>
+<tr><td><nonterm>PolicyStatement</nonterm></td><td> <nonterm>policyid</nonterm></td><td> <nonterm>policyid</nonterm></td><td>no</td><td>yes</td></tr>
+<tr><td><nonterm>I_B</nonterm></td><td> <nonterm>if</nonterm></td><td> <nonterm>then</nonterm></td><td>yes</td><td>no</td></tr>
+<tr><td><nonterm>PolicyId</nonterm></td><td> <nonterm>policyid</nonterm></td><td> <nonterm>on</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>EventStatement</nonterm></td><td> <nonterm>on</nonterm></td><td> <nonterm>if</nonterm> <nonterm>then</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>I_C</nonterm></td><td> <nonterm>or</nonterm></td><td> <nonterm>if</nonterm> <nonterm>then</nonterm></td><td>yes</td><td>no</td></tr>
+<tr><td><nonterm>SingleEvent</nonterm></td><td> <nonterm>atm</nonterm> <nonterm>chq</nonterm> <nonterm>cnp</nonterm> <nonterm>cp</nonterm> <nonterm>dd</nonterm> <nonterm>onl</nonterm> <nonterm>oth</nonterm></td><td> <nonterm>or</nonterm> <nonterm>if</nonterm> <nonterm>then</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>EventList</nonterm></td><td> <nonterm>@</nonterm> <nonterm>seq</nonterm></td><td> <nonterm>or</nonterm> <nonterm>if</nonterm> <nonterm>then</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>Sequence</nonterm></td><td> <nonterm>seq</nonterm></td><td> <nonterm>or</nonterm> <nonterm>if</nonterm> <nonterm>then</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>I_D</nonterm></td><td> <nonterm>(</nonterm></td><td> <nonterm>@</nonterm></td><td>yes</td><td>no</td></tr>
+<tr><td><nonterm>I_E</nonterm></td><td> <nonterm>;</nonterm></td><td> <nonterm>?</nonterm></td><td>yes</td><td>no</td></tr>
+<tr><td><nonterm>ConditionStatement</nonterm></td><td> <nonterm>if</nonterm></td><td> <nonterm>then</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>I_F</nonterm></td><td> <nonterm>and</nonterm> <nonterm>or</nonterm></td><td> <nonterm>then</nonterm></td><td>yes</td><td>no</td></tr>
+<tr><td><nonterm>LogicalOperator</nonterm></td><td> <nonterm>and</nonterm> <nonterm>or</nonterm></td><td> <nonterm>history</nonterm> <nonterm>query</nonterm> <nonterm>(</nonterm> <nonterm>false</nonterm> <nonterm>true</nonterm> <nonterm>string</nonterm> <nonterm>digit</nonterm> <nonterm>'</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>SingleCondition</nonterm></td><td> <nonterm>history</nonterm> <nonterm>query</nonterm> <nonterm>(</nonterm> <nonterm>false</nonterm> <nonterm>true</nonterm> <nonterm>string</nonterm> <nonterm>digit</nonterm> <nonterm>'</nonterm></td><td> <nonterm>and</nonterm> <nonterm>or</nonterm> <nonterm>then</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>AdditiveExpression2</nonterm></td><td> <nonterm>+</nonterm> <nonterm>_</nonterm></td><td> <nonterm>)</nonterm> <nonterm>!~</nonterm> <nonterm>'</nonterm> <nonterm>'~</nonterm> <nonterm>~</nonterm> <nonterm>#</nonterm> <nonterm>#~</nonterm> <nonterm>?</nonterm> <nonterm>and</nonterm> <nonterm>or</nonterm> <nonterm>then</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>I_H</nonterm></td><td> <nonterm>+</nonterm> <nonterm>_</nonterm></td><td> <nonterm>)</nonterm> <nonterm>!~</nonterm> <nonterm>'</nonterm> <nonterm>'~</nonterm> <nonterm>~</nonterm> <nonterm>#</nonterm> <nonterm>#~</nonterm> <nonterm>?</nonterm> <nonterm>and</nonterm> <nonterm>or</nonterm> <nonterm>then</nonterm></td><td>yes</td><td>no</td></tr>
+<tr><td><nonterm>FactorExpression1</nonterm></td><td> <nonterm>(</nonterm> <nonterm>false</nonterm> <nonterm>true</nonterm> <nonterm>string</nonterm> <nonterm>digit</nonterm> <nonterm>'</nonterm></td><td> <nonterm>+</nonterm> <nonterm>_</nonterm> <nonterm>)</nonterm> <nonterm>!~</nonterm> <nonterm>'</nonterm> <nonterm>'~</nonterm> <nonterm>~</nonterm> <nonterm>#</nonterm> <nonterm>#~</nonterm> <nonterm>?</nonterm> <nonterm>and</nonterm> <nonterm>or</nonterm> <nonterm>then</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>FactorExpression2</nonterm></td><td> <nonterm>*</nonterm> <nonterm>/</nonterm></td><td> <nonterm>+</nonterm> <nonterm>_</nonterm> <nonterm>)</nonterm> <nonterm>!~</nonterm> <nonterm>'</nonterm> <nonterm>'~</nonterm> <nonterm>~</nonterm> <nonterm>#</nonterm> <nonterm>#~</nonterm> <nonterm>?</nonterm> <nonterm>and</nonterm> <nonterm>or</nonterm> <nonterm>then</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>I_G</nonterm></td><td> <nonterm>*</nonterm> <nonterm>/</nonterm></td><td> <nonterm>+</nonterm> <nonterm>_</nonterm> <nonterm>)</nonterm> <nonterm>!~</nonterm> <nonterm>'</nonterm> <nonterm>'~</nonterm> <nonterm>~</nonterm> <nonterm>#</nonterm> <nonterm>#~</nonterm> <nonterm>?</nonterm> <nonterm>and</nonterm> <nonterm>or</nonterm> <nonterm>then</nonterm></td><td>yes</td><td>no</td></tr>
+<tr><td><nonterm>Factors</nonterm></td><td> <nonterm>(</nonterm> <nonterm>false</nonterm> <nonterm>true</nonterm> <nonterm>string</nonterm> <nonterm>digit</nonterm> <nonterm>'</nonterm></td><td> <nonterm>*</nonterm> <nonterm>/</nonterm> <nonterm>+</nonterm> <nonterm>_</nonterm> <nonterm>)</nonterm> <nonterm>!~</nonterm> <nonterm>'</nonterm> <nonterm>'~</nonterm> <nonterm>~</nonterm> <nonterm>#</nonterm> <nonterm>#~</nonterm> <nonterm>?</nonterm> <nonterm>and</nonterm> <nonterm>or</nonterm> <nonterm>then</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>Fdigit</nonterm></td><td> <nonterm>:</nonterm></td><td> <nonterm>;</nonterm> <nonterm>(</nonterm> <nonterm>string</nonterm> <nonterm>digit</nonterm> <nonterm>atm</nonterm> <nonterm>chq</nonterm> <nonterm>cnp</nonterm> <nonterm>cp</nonterm> <nonterm>dd</nonterm> <nonterm>onl</nonterm> <nonterm>oth</nonterm> <nonterm>*</nonterm> <nonterm>/</nonterm> <nonterm>+</nonterm> <nonterm>_</nonterm> <nonterm>!~</nonterm> <nonterm>'</nonterm> <nonterm>'~</nonterm> <nonterm>~</nonterm> <nonterm>#</nonterm> <nonterm>#~</nonterm> <nonterm>?</nonterm> <nonterm>and</nonterm> <nonterm>or</nonterm> <nonterm>)</nonterm> <nonterm>then</nonterm></td><td>yes</td><td>no</td></tr>
+<tr><td><nonterm>Boolean</nonterm></td><td> <nonterm>false</nonterm> <nonterm>true</nonterm></td><td> <nonterm>*</nonterm> <nonterm>/</nonterm> <nonterm>+</nonterm> <nonterm>_</nonterm> <nonterm>)</nonterm> <nonterm>!~</nonterm> <nonterm>'</nonterm> <nonterm>'~</nonterm> <nonterm>~</nonterm> <nonterm>#</nonterm> <nonterm>#~</nonterm> <nonterm>?</nonterm> <nonterm>and</nonterm> <nonterm>or</nonterm> <nonterm>then</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>String</nonterm></td><td> <nonterm>'</nonterm></td><td> <nonterm>*</nonterm> <nonterm>/</nonterm> <nonterm>+</nonterm> <nonterm>_</nonterm> <nonterm>)</nonterm> <nonterm>!~</nonterm> <nonterm>'</nonterm> <nonterm>'~</nonterm> <nonterm>~</nonterm> <nonterm>#</nonterm> <nonterm>#~</nonterm> <nonterm>and</nonterm> <nonterm>or</nonterm> <nonterm>?</nonterm> <nonterm>then</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>Query</nonterm></td><td> <nonterm>query</nonterm></td><td> <nonterm>*</nonterm> <nonterm>/</nonterm> <nonterm>+</nonterm> <nonterm>_</nonterm> <nonterm>)</nonterm> <nonterm>!~</nonterm> <nonterm>'</nonterm> <nonterm>'~</nonterm> <nonterm>~</nonterm> <nonterm>#</nonterm> <nonterm>#~</nonterm> <nonterm>?</nonterm> <nonterm>and</nonterm> <nonterm>or</nonterm> <nonterm>then</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>StoredProcedure</nonterm></td><td> <nonterm>string</nonterm></td><td> <nonterm>*</nonterm> <nonterm>/</nonterm> <nonterm>+</nonterm> <nonterm>_</nonterm> <nonterm>)</nonterm> <nonterm>!~</nonterm> <nonterm>'</nonterm> <nonterm>'~</nonterm> <nonterm>~</nonterm> <nonterm>#</nonterm> <nonterm>#~</nonterm> <nonterm>?</nonterm> <nonterm>and</nonterm> <nonterm>or</nonterm> <nonterm>then</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>I_I</nonterm></td><td> <nonterm>;</nonterm></td><td> <nonterm>)</nonterm> <nonterm>(</nonterm> <nonterm>string</nonterm> <nonterm>digit</nonterm> <nonterm>atm</nonterm> <nonterm>chq</nonterm> <nonterm>cnp</nonterm> <nonterm>cp</nonterm> <nonterm>dd</nonterm> <nonterm>onl</nonterm> <nonterm>oth</nonterm></td><td>yes</td><td>no</td></tr>
+<tr><td><nonterm>ParamInput</nonterm></td><td> <nonterm>(</nonterm> <nonterm>string</nonterm> <nonterm>digit</nonterm> <nonterm>atm</nonterm> <nonterm>chq</nonterm> <nonterm>cnp</nonterm> <nonterm>cp</nonterm> <nonterm>dd</nonterm> <nonterm>onl</nonterm> <nonterm>oth</nonterm></td><td> <nonterm>;</nonterm> <nonterm>)</nonterm> <nonterm>(</nonterm> <nonterm>string</nonterm> <nonterm>digit</nonterm> <nonterm>atm</nonterm> <nonterm>chq</nonterm> <nonterm>cnp</nonterm> <nonterm>cp</nonterm> <nonterm>dd</nonterm> <nonterm>onl</nonterm> <nonterm>oth</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>IntegerLiteral</nonterm></td><td> <nonterm>digit</nonterm></td><td> <nonterm>;</nonterm> <nonterm>(</nonterm> <nonterm>string</nonterm> <nonterm>digit</nonterm> <nonterm>atm</nonterm> <nonterm>chq</nonterm> <nonterm>cnp</nonterm> <nonterm>cp</nonterm> <nonterm>dd</nonterm> <nonterm>onl</nonterm> <nonterm>oth</nonterm> <nonterm>*</nonterm> <nonterm>/</nonterm> <nonterm>+</nonterm> <nonterm>_</nonterm> <nonterm>!~</nonterm> <nonterm>'</nonterm> <nonterm>'~</nonterm> <nonterm>~</nonterm> <nonterm>#</nonterm> <nonterm>#~</nonterm> <nonterm>?</nonterm> <nonterm>and</nonterm> <nonterm>or</nonterm> <nonterm>)</nonterm> <nonterm>then</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>ChannelList</nonterm></td><td> <nonterm>(</nonterm> <nonterm>atm</nonterm> <nonterm>chq</nonterm> <nonterm>cnp</nonterm> <nonterm>cp</nonterm> <nonterm>dd</nonterm> <nonterm>onl</nonterm> <nonterm>oth</nonterm></td><td> <nonterm>;</nonterm> <nonterm>)</nonterm> <nonterm>(</nonterm> <nonterm>string</nonterm> <nonterm>digit</nonterm> <nonterm>atm</nonterm> <nonterm>chq</nonterm> <nonterm>cnp</nonterm> <nonterm>cp</nonterm> <nonterm>dd</nonterm> <nonterm>onl</nonterm> <nonterm>oth</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>Channel</nonterm></td><td> <nonterm>atm</nonterm> <nonterm>chq</nonterm> <nonterm>cnp</nonterm> <nonterm>cp</nonterm> <nonterm>dd</nonterm> <nonterm>onl</nonterm> <nonterm>oth</nonterm></td><td> <nonterm>(</nonterm> <nonterm>string</nonterm> <nonterm>digit</nonterm> <nonterm>atm</nonterm> <nonterm>chq</nonterm> <nonterm>cnp</nonterm> <nonterm>cp</nonterm> <nonterm>dd</nonterm> <nonterm>onl</nonterm> <nonterm>oth</nonterm> <nonterm>@</nonterm> <nonterm>seq</nonterm> <nonterm>;</nonterm> <nonterm>)</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>I_J</nonterm></td><td> <nonterm>;</nonterm></td><td> <nonterm>)</nonterm></td><td>yes</td><td>no</td></tr>
+<tr><td><nonterm>HistoryStatement</nonterm></td><td> <nonterm>history</nonterm></td><td> <nonterm>!~</nonterm> <nonterm>'</nonterm> <nonterm>'~</nonterm> <nonterm>~</nonterm> <nonterm>#</nonterm> <nonterm>#~</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>HistInput</nonterm></td><td> <nonterm>(</nonterm></td><td> <nonterm>!~</nonterm> <nonterm>'</nonterm> <nonterm>'~</nonterm> <nonterm>~</nonterm> <nonterm>#</nonterm> <nonterm>#~</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>AdditiveExpression1</nonterm></td><td> <nonterm>query</nonterm> <nonterm>(</nonterm> <nonterm>false</nonterm> <nonterm>true</nonterm> <nonterm>string</nonterm> <nonterm>digit</nonterm> <nonterm>'</nonterm></td><td> <nonterm>)</nonterm> <nonterm>!~</nonterm> <nonterm>'</nonterm> <nonterm>'~</nonterm> <nonterm>~</nonterm> <nonterm>#</nonterm> <nonterm>#~</nonterm> <nonterm>?</nonterm> <nonterm>and</nonterm> <nonterm>or</nonterm> <nonterm>then</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>ActionStatement</nonterm></td><td> <nonterm>then</nonterm></td><td> <nonterm>;</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>I_K</nonterm></td><td> <nonterm>and</nonterm></td><td> <nonterm>;</nonterm></td><td>yes</td><td>no</td></tr>
+<tr><td><nonterm>Parameters</nonterm></td><td> <nonterm>(</nonterm> <nonterm>string</nonterm> <nonterm>digit</nonterm> <nonterm>atm</nonterm> <nonterm>chq</nonterm> <nonterm>cnp</nonterm> <nonterm>cp</nonterm> <nonterm>dd</nonterm> <nonterm>onl</nonterm> <nonterm>oth</nonterm></td><td> <nonterm>)</nonterm> <nonterm>(</nonterm> <nonterm>string</nonterm> <nonterm>digit</nonterm> <nonterm>atm</nonterm> <nonterm>chq</nonterm> <nonterm>cnp</nonterm> <nonterm>cp</nonterm> <nonterm>dd</nonterm> <nonterm>onl</nonterm> <nonterm>oth</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>Procedure</nonterm></td><td> <nonterm>string</nonterm></td><td> <nonterm>and</nonterm> <nonterm>;</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>Instance</nonterm></td><td> <nonterm>string</nonterm></td><td> <nonterm>(</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>I_L</nonterm></td><td> <nonterm>(</nonterm> <nonterm>string</nonterm> <nonterm>digit</nonterm> <nonterm>atm</nonterm> <nonterm>chq</nonterm> <nonterm>cnp</nonterm> <nonterm>cp</nonterm> <nonterm>dd</nonterm> <nonterm>onl</nonterm> <nonterm>oth</nonterm></td><td> <nonterm>)</nonterm></td><td>yes</td><td>no</td></tr>
+<tr><td><nonterm>LogicalAnd</nonterm></td><td> <nonterm>and</nonterm></td><td> <nonterm>history</nonterm> <nonterm>query</nonterm> <nonterm>(</nonterm> <nonterm>false</nonterm> <nonterm>true</nonterm> <nonterm>string</nonterm> <nonterm>digit</nonterm> <nonterm>'</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>LogicalOr</nonterm></td><td> <nonterm>or</nonterm></td><td> <nonterm>history</nonterm> <nonterm>query</nonterm> <nonterm>(</nonterm> <nonterm>false</nonterm> <nonterm>true</nonterm> <nonterm>string</nonterm> <nonterm>digit</nonterm> <nonterm>'</nonterm> <nonterm>atm</nonterm> <nonterm>chq</nonterm> <nonterm>cnp</nonterm> <nonterm>cp</nonterm> <nonterm>dd</nonterm> <nonterm>onl</nonterm> <nonterm>oth</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>Comparison</nonterm></td><td> <nonterm>!~</nonterm> <nonterm>'</nonterm> <nonterm>'~</nonterm> <nonterm>~</nonterm> <nonterm>#</nonterm> <nonterm>#~</nonterm></td><td> <nonterm>query</nonterm> <nonterm>(</nonterm> <nonterm>false</nonterm> <nonterm>true</nonterm> <nonterm>string</nonterm> <nonterm>digit</nonterm> <nonterm>'</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>EventParameter</nonterm></td><td> <nonterm>string</nonterm></td><td> <nonterm>;</nonterm> <nonterm>(</nonterm> <nonterm>string</nonterm> <nonterm>digit</nonterm> <nonterm>atm</nonterm> <nonterm>chq</nonterm> <nonterm>cnp</nonterm> <nonterm>cp</nonterm> <nonterm>dd</nonterm> <nonterm>onl</nonterm> <nonterm>oth</nonterm> <nonterm>*</nonterm> <nonterm>/</nonterm> <nonterm>+</nonterm> <nonterm>_</nonterm> <nonterm>)</nonterm> <nonterm>!~</nonterm> <nonterm>'</nonterm> <nonterm>'~</nonterm> <nonterm>~</nonterm> <nonterm>#</nonterm> <nonterm>#~</nonterm> <nonterm>?</nonterm> <nonterm>and</nonterm> <nonterm>or</nonterm> <nonterm>then</nonterm></td><td>no</td><td>no</td></tr>
+<tr><td><nonterm>Event</nonterm></td><td> <nonterm>string</nonterm></td><td> <nonterm>;</nonterm> <nonterm>?</nonterm></td><td>no</td><td>no</td></tr>
+</tbody></table><p>
+The grammar is LL(1).
+</p><p></p><hr><ul>
+<li>attempt to <a target="_top" href="https://smlweb.cpsc.ucalgary.ca/transform.php?grammar=%0A%0APolicyList+-%3E+PolicyStatement+I_A+.%0A%0AI_A+-%3E+PolicyStatement+I_A+%0A++++++%7C.%0A%0AI_B+-%3E+ConditionStatement+%0A++++++%7C.%0A%0APolicyStatement+-%3E+PolicyId+EventStatement+I_B+ActionStatement+%3B+.%0A%0APolicyId+-%3E+policyid+%40+String+%3F+.%0A%0AI_C+-%3E+LogicalOr+SingleEvent+I_C+%0A++++++%7C.%0A%0AEventStatement+-%3E+on+SingleEvent+I_C+.%0A%0ASingleEvent+-%3E+Channel+EventList+.%0A%0AChannel+-%3E+atm+%0A++++++++++%7Cchq+%0A++++++++++%7Ccnp+%0A++++++++++%7Ccp+%0A++++++++++%7Cdd+%0A++++++++++%7Conl+%0A++++++++++%7Coth+.%0A%0AEventList+-%3E+Sequence+%0A++++++++++++%7C%40+Event+%3F+.%0A%0AI_D+-%3E+%28+IntegerLiteral+%29+%0A++++++%7C.%0A%0AI_E+-%3E+%3B+Event+I_E+%0A++++++%7C.%0A%0ASequence+-%3E+seq+I_D+%40+Event+%3B+Event+I_E+%3F+.%0A%0AInstance+-%3E+string+.%0A%0AI_F+-%3E+LogicalOperator+SingleCondition+I_F+%0A++++++%7C.%0A%0AConditionStatement+-%3E+if+SingleCondition+I_F+.%0A%0ALogicalOperator+-%3E+LogicalAnd+%0A++++++++++++++++++%7CLogicalOr+.%0A%0ASingleCondition+-%3E+AdditiveExpression1+Comparison+AdditiveExpression1+%0A++++++++++++++++++%7CHistoryStatement+Comparison+AdditiveExpression1+.%0A%0AI_G+-%3E+FactorExpression2+%0A++++++%7C.%0A%0AI_H+-%3E+AdditiveExpression2+%0A++++++%7C.%0A%0AAdditiveExpression1+-%3E+FactorExpression1+I_H+%0A++++++++++++++++++++++%7CQuery+I_G+I_H+.%0A%0AAdditiveExpression2+-%3E+%2B+FactorExpression1+I_H+%0A++++++++++++++++++++++%7C_+FactorExpression1+I_H+.%0A%0AFactorExpression1+-%3E+Factors+I_G+.%0A%0AFactorExpression2+-%3E+%2A+Factors+I_G+%0A++++++++++++++++++++%7C%2F+Factors+I_G+.%0A%0AFactors+-%3E+Boolean+%0A++++++++++%7CEventParameter+%0A++++++++++%7CIntegerLiteral+%0A++++++++++%7CString+%0A++++++++++%7C%28+AdditiveExpression1+%29+.%0A%0AIntegerLiteral+-%3E+digit+Fdigit+.%0A%0AFdigit+-%3E+%0A+++++++++%7C%3A+digit+.%0A%0ABoolean+-%3E+false+%0A++++++++++%7Ctrue+.%0A%0AString+-%3E+%27+string+%27+.%0A%0AQuery+-%3E+query+StoredProcedure+.%0A%0AStoredProcedure+-%3E+Instance+%28+Parameters+%29+.%0A%0AI_I+-%3E+%3B+ParamInput+I_I+%0A++++++%7C.%0A%0AParameters+-%3E+ParamInput+I_I+.%0A%0AParamInput+-%3E+ChannelList+%0A+++++++++++++%7CEventParameter+%0A+++++++++++++%7CIntegerLiteral+.%0A%0AI_J+-%3E+%3B+Channel+I_J+%0A++++++%7C.%0A%0AChannelList+-%3E+Channel+%0A++++++++++++++%7C%28+Channel+I_J+%29+.%0A%0AHistoryStatement+-%3E+history+HistInput+.%0A%0AHistInput+-%3E+%28+digit+%29+%40+AdditiveExpression1+Comparison+AdditiveExpression1+%3F+.%0A%0AI_K+-%3E+LogicalAnd+Procedure+I_K+%0A++++++%7C.%0A%0AActionStatement+-%3E+then+Procedure+I_K+.%0A%0AI_L+-%3E+Parameters+I_L+%0A++++++%7C.%0A%0AProcedure+-%3E+Instance+%28+I_L+%29+.%0A%0ALogicalAnd+-%3E+and+.%0A%0ALogicalOr+-%3E+or+.%0A%0AComparison+-%3E+%21%7E+%0A+++++++++++++%7C%27+%0A+++++++++++++%7C%27%7E+%0A+++++++++++++%7C%7E+%0A+++++++++++++%7C%23+%0A+++++++++++++%7C%23%7E+.%0A%0AEventParameter+-%3E+string+.%0A%0AEvent+-%3E+string+.%0A%0A&amp;substs=%0A">transform</a> the grammar (to LL(1))
+</li><li>generate <a target="_top" href="https://smlweb.cpsc.ucalgary.ca/ll1-table.php?grammar=%0A%0APolicyList+-%3E+PolicyStatement+I_A+.%0A%0AI_A+-%3E+PolicyStatement+I_A+%0A++++++%7C.%0A%0AI_B+-%3E+ConditionStatement+%0A++++++%7C.%0A%0APolicyStatement+-%3E+PolicyId+EventStatement+I_B+ActionStatement+%3B+.%0A%0APolicyId+-%3E+policyid+%40+String+%3F+.%0A%0AI_C+-%3E+LogicalOr+SingleEvent+I_C+%0A++++++%7C.%0A%0AEventStatement+-%3E+on+SingleEvent+I_C+.%0A%0ASingleEvent+-%3E+Channel+EventList+.%0A%0AChannel+-%3E+atm+%0A++++++++++%7Cchq+%0A++++++++++%7Ccnp+%0A++++++++++%7Ccp+%0A++++++++++%7Cdd+%0A++++++++++%7Conl+%0A++++++++++%7Coth+.%0A%0AEventList+-%3E+Sequence+%0A++++++++++++%7C%40+Event+%3F+.%0A%0AI_D+-%3E+%28+IntegerLiteral+%29+%0A++++++%7C.%0A%0AI_E+-%3E+%3B+Event+I_E+%0A++++++%7C.%0A%0ASequence+-%3E+seq+I_D+%40+Event+%3B+Event+I_E+%3F+.%0A%0AInstance+-%3E+string+.%0A%0AI_F+-%3E+LogicalOperator+SingleCondition+I_F+%0A++++++%7C.%0A%0AConditionStatement+-%3E+if+SingleCondition+I_F+.%0A%0ALogicalOperator+-%3E+LogicalAnd+%0A++++++++++++++++++%7CLogicalOr+.%0A%0ASingleCondition+-%3E+AdditiveExpression1+Comparison+AdditiveExpression1+%0A++++++++++++++++++%7CHistoryStatement+Comparison+AdditiveExpression1+.%0A%0AI_G+-%3E+FactorExpression2+%0A++++++%7C.%0A%0AI_H+-%3E+AdditiveExpression2+%0A++++++%7C.%0A%0AAdditiveExpression1+-%3E+FactorExpression1+I_H+%0A++++++++++++++++++++++%7CQuery+I_G+I_H+.%0A%0AAdditiveExpression2+-%3E+%2B+FactorExpression1+I_H+%0A++++++++++++++++++++++%7C_+FactorExpression1+I_H+.%0A%0AFactorExpression1+-%3E+Factors+I_G+.%0A%0AFactorExpression2+-%3E+%2A+Factors+I_G+%0A++++++++++++++++++++%7C%2F+Factors+I_G+.%0A%0AFactors+-%3E+Boolean+%0A++++++++++%7CEventParameter+%0A++++++++++%7CIntegerLiteral+%0A++++++++++%7CString+%0A++++++++++%7C%28+AdditiveExpression1+%29+.%0A%0AIntegerLiteral+-%3E+digit+Fdigit+.%0A%0AFdigit+-%3E+%0A+++++++++%7C%3A+digit+.%0A%0ABoolean+-%3E+false+%0A++++++++++%7Ctrue+.%0A%0AString+-%3E+%27+string+%27+.%0A%0AQuery+-%3E+query+StoredProcedure+.%0A%0AStoredProcedure+-%3E+Instance+%28+Parameters+%29+.%0A%0AI_I+-%3E+%3B+ParamInput+I_I+%0A++++++%7C.%0A%0AParameters+-%3E+ParamInput+I_I+.%0A%0AParamInput+-%3E+ChannelList+%0A+++++++++++++%7CEventParameter+%0A+++++++++++++%7CIntegerLiteral+.%0A%0AI_J+-%3E+%3B+Channel+I_J+%0A++++++%7C.%0A%0AChannelList+-%3E+Channel+%0A++++++++++++++%7C%28+Channel+I_J+%29+.%0A%0AHistoryStatement+-%3E+history+HistInput+.%0A%0AHistInput+-%3E+%28+digit+%29+%40+AdditiveExpression1+Comparison+AdditiveExpression1+%3F+.%0A%0AI_K+-%3E+LogicalAnd+Procedure+I_K+%0A++++++%7C.%0A%0AActionStatement+-%3E+then+Procedure+I_K+.%0A%0AI_L+-%3E+Parameters+I_L+%0A++++++%7C.%0A%0AProcedure+-%3E+Instance+%28+I_L+%29+.%0A%0ALogicalAnd+-%3E+and+.%0A%0ALogicalOr+-%3E+or+.%0A%0AComparison+-%3E+%21%7E+%0A+++++++++++++%7C%27+%0A+++++++++++++%7C%27%7E+%0A+++++++++++++%7C%7E+%0A+++++++++++++%7C%23+%0A+++++++++++++%7C%23%7E+.%0A%0AEventParameter+-%3E+string+.%0A%0AEvent+-%3E+string+.%0A%0A&amp;substs=%0A">LL(1)</a> parsing table
+</li><li>generate <a target="_top" href="https://smlweb.cpsc.ucalgary.ca/lr0.php?grammar=%0A%0APolicyList+-%3E+PolicyStatement+I_A+.%0A%0AI_A+-%3E+PolicyStatement+I_A+%0A++++++%7C.%0A%0AI_B+-%3E+ConditionStatement+%0A++++++%7C.%0A%0APolicyStatement+-%3E+PolicyId+EventStatement+I_B+ActionStatement+%3B+.%0A%0APolicyId+-%3E+policyid+%40+String+%3F+.%0A%0AI_C+-%3E+LogicalOr+SingleEvent+I_C+%0A++++++%7C.%0A%0AEventStatement+-%3E+on+SingleEvent+I_C+.%0A%0ASingleEvent+-%3E+Channel+EventList+.%0A%0AChannel+-%3E+atm+%0A++++++++++%7Cchq+%0A++++++++++%7Ccnp+%0A++++++++++%7Ccp+%0A++++++++++%7Cdd+%0A++++++++++%7Conl+%0A++++++++++%7Coth+.%0A%0AEventList+-%3E+Sequence+%0A++++++++++++%7C%40+Event+%3F+.%0A%0AI_D+-%3E+%28+IntegerLiteral+%29+%0A++++++%7C.%0A%0AI_E+-%3E+%3B+Event+I_E+%0A++++++%7C.%0A%0ASequence+-%3E+seq+I_D+%40+Event+%3B+Event+I_E+%3F+.%0A%0AInstance+-%3E+string+.%0A%0AI_F+-%3E+LogicalOperator+SingleCondition+I_F+%0A++++++%7C.%0A%0AConditionStatement+-%3E+if+SingleCondition+I_F+.%0A%0ALogicalOperator+-%3E+LogicalAnd+%0A++++++++++++++++++%7CLogicalOr+.%0A%0ASingleCondition+-%3E+AdditiveExpression1+Comparison+AdditiveExpression1+%0A++++++++++++++++++%7CHistoryStatement+Comparison+AdditiveExpression1+.%0A%0AI_G+-%3E+FactorExpression2+%0A++++++%7C.%0A%0AI_H+-%3E+AdditiveExpression2+%0A++++++%7C.%0A%0AAdditiveExpression1+-%3E+FactorExpression1+I_H+%0A++++++++++++++++++++++%7CQuery+I_G+I_H+.%0A%0AAdditiveExpression2+-%3E+%2B+FactorExpression1+I_H+%0A++++++++++++++++++++++%7C_+FactorExpression1+I_H+.%0A%0AFactorExpression1+-%3E+Factors+I_G+.%0A%0AFactorExpression2+-%3E+%2A+Factors+I_G+%0A++++++++++++++++++++%7C%2F+Factors+I_G+.%0A%0AFactors+-%3E+Boolean+%0A++++++++++%7CEventParameter+%0A++++++++++%7CIntegerLiteral+%0A++++++++++%7CString+%0A++++++++++%7C%28+AdditiveExpression1+%29+.%0A%0AIntegerLiteral+-%3E+digit+Fdigit+.%0A%0AFdigit+-%3E+%0A+++++++++%7C%3A+digit+.%0A%0ABoolean+-%3E+false+%0A++++++++++%7Ctrue+.%0A%0AString+-%3E+%27+string+%27+.%0A%0AQuery+-%3E+query+StoredProcedure+.%0A%0AStoredProcedure+-%3E+Instance+%28+Parameters+%29+.%0A%0AI_I+-%3E+%3B+ParamInput+I_I+%0A++++++%7C.%0A%0AParameters+-%3E+ParamInput+I_I+.%0A%0AParamInput+-%3E+ChannelList+%0A+++++++++++++%7CEventParameter+%0A+++++++++++++%7CIntegerLiteral+.%0A%0AI_J+-%3E+%3B+Channel+I_J+%0A++++++%7C.%0A%0AChannelList+-%3E+Channel+%0A++++++++++++++%7C%28+Channel+I_J+%29+.%0A%0AHistoryStatement+-%3E+history+HistInput+.%0A%0AHistInput+-%3E+%28+digit+%29+%40+AdditiveExpression1+Comparison+AdditiveExpression1+%3F+.%0A%0AI_K+-%3E+LogicalAnd+Procedure+I_K+%0A++++++%7C.%0A%0AActionStatement+-%3E+then+Procedure+I_K+.%0A%0AI_L+-%3E+Parameters+I_L+%0A++++++%7C.%0A%0AProcedure+-%3E+Instance+%28+I_L+%29+.%0A%0ALogicalAnd+-%3E+and+.%0A%0ALogicalOr+-%3E+or+.%0A%0AComparison+-%3E+%21%7E+%0A+++++++++++++%7C%27+%0A+++++++++++++%7C%27%7E+%0A+++++++++++++%7C%7E+%0A+++++++++++++%7C%23+%0A+++++++++++++%7C%23%7E+.%0A%0AEventParameter+-%3E+string+.%0A%0AEvent+-%3E+string+.%0A%0A&amp;substs=%0A">LR(0)/SLR(1)</a> automaton
+</li><li>generate <a target="_top" href="https://smlweb.cpsc.ucalgary.ca/lalr1.php?grammar=%0A%0APolicyList+-%3E+PolicyStatement+I_A+.%0A%0AI_A+-%3E+PolicyStatement+I_A+%0A++++++%7C.%0A%0AI_B+-%3E+ConditionStatement+%0A++++++%7C.%0A%0APolicyStatement+-%3E+PolicyId+EventStatement+I_B+ActionStatement+%3B+.%0A%0APolicyId+-%3E+policyid+%40+String+%3F+.%0A%0AI_C+-%3E+LogicalOr+SingleEvent+I_C+%0A++++++%7C.%0A%0AEventStatement+-%3E+on+SingleEvent+I_C+.%0A%0ASingleEvent+-%3E+Channel+EventList+.%0A%0AChannel+-%3E+atm+%0A++++++++++%7Cchq+%0A++++++++++%7Ccnp+%0A++++++++++%7Ccp+%0A++++++++++%7Cdd+%0A++++++++++%7Conl+%0A++++++++++%7Coth+.%0A%0AEventList+-%3E+Sequence+%0A++++++++++++%7C%40+Event+%3F+.%0A%0AI_D+-%3E+%28+IntegerLiteral+%29+%0A++++++%7C.%0A%0AI_E+-%3E+%3B+Event+I_E+%0A++++++%7C.%0A%0ASequence+-%3E+seq+I_D+%40+Event+%3B+Event+I_E+%3F+.%0A%0AInstance+-%3E+string+.%0A%0AI_F+-%3E+LogicalOperator+SingleCondition+I_F+%0A++++++%7C.%0A%0AConditionStatement+-%3E+if+SingleCondition+I_F+.%0A%0ALogicalOperator+-%3E+LogicalAnd+%0A++++++++++++++++++%7CLogicalOr+.%0A%0ASingleCondition+-%3E+AdditiveExpression1+Comparison+AdditiveExpression1+%0A++++++++++++++++++%7CHistoryStatement+Comparison+AdditiveExpression1+.%0A%0AI_G+-%3E+FactorExpression2+%0A++++++%7C.%0A%0AI_H+-%3E+AdditiveExpression2+%0A++++++%7C.%0A%0AAdditiveExpression1+-%3E+FactorExpression1+I_H+%0A++++++++++++++++++++++%7CQuery+I_G+I_H+.%0A%0AAdditiveExpression2+-%3E+%2B+FactorExpression1+I_H+%0A++++++++++++++++++++++%7C_+FactorExpression1+I_H+.%0A%0AFactorExpression1+-%3E+Factors+I_G+.%0A%0AFactorExpression2+-%3E+%2A+Factors+I_G+%0A++++++++++++++++++++%7C%2F+Factors+I_G+.%0A%0AFactors+-%3E+Boolean+%0A++++++++++%7CEventParameter+%0A++++++++++%7CIntegerLiteral+%0A++++++++++%7CString+%0A++++++++++%7C%28+AdditiveExpression1+%29+.%0A%0AIntegerLiteral+-%3E+digit+Fdigit+.%0A%0AFdigit+-%3E+%0A+++++++++%7C%3A+digit+.%0A%0ABoolean+-%3E+false+%0A++++++++++%7Ctrue+.%0A%0AString+-%3E+%27+string+%27+.%0A%0AQuery+-%3E+query+StoredProcedure+.%0A%0AStoredProcedure+-%3E+Instance+%28+Parameters+%29+.%0A%0AI_I+-%3E+%3B+ParamInput+I_I+%0A++++++%7C.%0A%0AParameters+-%3E+ParamInput+I_I+.%0A%0AParamInput+-%3E+ChannelList+%0A+++++++++++++%7CEventParameter+%0A+++++++++++++%7CIntegerLiteral+.%0A%0AI_J+-%3E+%3B+Channel+I_J+%0A++++++%7C.%0A%0AChannelList+-%3E+Channel+%0A++++++++++++++%7C%28+Channel+I_J+%29+.%0A%0AHistoryStatement+-%3E+history+HistInput+.%0A%0AHistInput+-%3E+%28+digit+%29+%40+AdditiveExpression1+Comparison+AdditiveExpression1+%3F+.%0A%0AI_K+-%3E+LogicalAnd+Procedure+I_K+%0A++++++%7C.%0A%0AActionStatement+-%3E+then+Procedure+I_K+.%0A%0AI_L+-%3E+Parameters+I_L+%0A++++++%7C.%0A%0AProcedure+-%3E+Instance+%28+I_L+%29+.%0A%0ALogicalAnd+-%3E+and+.%0A%0ALogicalOr+-%3E+or+.%0A%0AComparison+-%3E+%21%7E+%0A+++++++++++++%7C%27+%0A+++++++++++++%7C%27%7E+%0A+++++++++++++%7C%7E+%0A+++++++++++++%7C%23+%0A+++++++++++++%7C%23%7E+.%0A%0AEventParameter+-%3E+string+.%0A%0AEvent+-%3E+string+.%0A%0A&amp;substs=%0A">LALR(1)</a> automaton
+</li><li>generate <a target="_top" href="https://smlweb.cpsc.ucalgary.ca/lr1.php?grammar=%0A%0APolicyList+-%3E+PolicyStatement+I_A+.%0A%0AI_A+-%3E+PolicyStatement+I_A+%0A++++++%7C.%0A%0AI_B+-%3E+ConditionStatement+%0A++++++%7C.%0A%0APolicyStatement+-%3E+PolicyId+EventStatement+I_B+ActionStatement+%3B+.%0A%0APolicyId+-%3E+policyid+%40+String+%3F+.%0A%0AI_C+-%3E+LogicalOr+SingleEvent+I_C+%0A++++++%7C.%0A%0AEventStatement+-%3E+on+SingleEvent+I_C+.%0A%0ASingleEvent+-%3E+Channel+EventList+.%0A%0AChannel+-%3E+atm+%0A++++++++++%7Cchq+%0A++++++++++%7Ccnp+%0A++++++++++%7Ccp+%0A++++++++++%7Cdd+%0A++++++++++%7Conl+%0A++++++++++%7Coth+.%0A%0AEventList+-%3E+Sequence+%0A++++++++++++%7C%40+Event+%3F+.%0A%0AI_D+-%3E+%28+IntegerLiteral+%29+%0A++++++%7C.%0A%0AI_E+-%3E+%3B+Event+I_E+%0A++++++%7C.%0A%0ASequence+-%3E+seq+I_D+%40+Event+%3B+Event+I_E+%3F+.%0A%0AInstance+-%3E+string+.%0A%0AI_F+-%3E+LogicalOperator+SingleCondition+I_F+%0A++++++%7C.%0A%0AConditionStatement+-%3E+if+SingleCondition+I_F+.%0A%0ALogicalOperator+-%3E+LogicalAnd+%0A++++++++++++++++++%7CLogicalOr+.%0A%0ASingleCondition+-%3E+AdditiveExpression1+Comparison+AdditiveExpression1+%0A++++++++++++++++++%7CHistoryStatement+Comparison+AdditiveExpression1+.%0A%0AI_G+-%3E+FactorExpression2+%0A++++++%7C.%0A%0AI_H+-%3E+AdditiveExpression2+%0A++++++%7C.%0A%0AAdditiveExpression1+-%3E+FactorExpression1+I_H+%0A++++++++++++++++++++++%7CQuery+I_G+I_H+.%0A%0AAdditiveExpression2+-%3E+%2B+FactorExpression1+I_H+%0A++++++++++++++++++++++%7C_+FactorExpression1+I_H+.%0A%0AFactorExpression1+-%3E+Factors+I_G+.%0A%0AFactorExpression2+-%3E+%2A+Factors+I_G+%0A++++++++++++++++++++%7C%2F+Factors+I_G+.%0A%0AFactors+-%3E+Boolean+%0A++++++++++%7CEventParameter+%0A++++++++++%7CIntegerLiteral+%0A++++++++++%7CString+%0A++++++++++%7C%28+AdditiveExpression1+%29+.%0A%0AIntegerLiteral+-%3E+digit+Fdigit+.%0A%0AFdigit+-%3E+%0A+++++++++%7C%3A+digit+.%0A%0ABoolean+-%3E+false+%0A++++++++++%7Ctrue+.%0A%0AString+-%3E+%27+string+%27+.%0A%0AQuery+-%3E+query+StoredProcedure+.%0A%0AStoredProcedure+-%3E+Instance+%28+Parameters+%29+.%0A%0AI_I+-%3E+%3B+ParamInput+I_I+%0A++++++%7C.%0A%0AParameters+-%3E+ParamInput+I_I+.%0A%0AParamInput+-%3E+ChannelList+%0A+++++++++++++%7CEventParameter+%0A+++++++++++++%7CIntegerLiteral+.%0A%0AI_J+-%3E+%3B+Channel+I_J+%0A++++++%7C.%0A%0AChannelList+-%3E+Channel+%0A++++++++++++++%7C%28+Channel+I_J+%29+.%0A%0AHistoryStatement+-%3E+history+HistInput+.%0A%0AHistInput+-%3E+%28+digit+%29+%40+AdditiveExpression1+Comparison+AdditiveExpression1+%3F+.%0A%0AI_K+-%3E+LogicalAnd+Procedure+I_K+%0A++++++%7C.%0A%0AActionStatement+-%3E+then+Procedure+I_K+.%0A%0AI_L+-%3E+Parameters+I_L+%0A++++++%7C.%0A%0AProcedure+-%3E+Instance+%28+I_L+%29+.%0A%0ALogicalAnd+-%3E+and+.%0A%0ALogicalOr+-%3E+or+.%0A%0AComparison+-%3E+%21%7E+%0A+++++++++++++%7C%27+%0A+++++++++++++%7C%27%7E+%0A+++++++++++++%7C%7E+%0A+++++++++++++%7C%23+%0A+++++++++++++%7C%23%7E+.%0A%0AEventParameter+-%3E+string+.%0A%0AEvent+-%3E+string+.%0A%0A&amp;substs=%0A">LR(1)</a> automaton
+</li></ul><hr>
+
+Return home to <a target="_top" href="https://smlweb.cpsc.ucalgary.ca/start.html">enter a new grammar</a>.
+
+
+
+</body></html>

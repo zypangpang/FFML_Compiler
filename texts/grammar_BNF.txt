@@ -51,7 +51,7 @@ Sequence ->
       "SEQ" I_D "[" Event "," Event I_E "]"
     ;
 Instance ->
-      <STRING>
+      <ID>
     ;
 I_F ->
       LogicalOperator SingleCondition I_F
@@ -99,8 +99,8 @@ Factors ->
     | "(" AdditiveExpression1 ")"
     ;
 IntegerLiteral ->
-      <DIGIT>
-    | <DIGIT> "." <DIGIT>
+      <DIGITS>
+    | <DIGITS> "." <DIGITS>
     ;
 Boolean ->
       "FALSE"
@@ -139,7 +139,7 @@ HistoryStatement ->
       "HISTORY" HistInput
     ;
 HistInput ->
-      "(" <DIGIT> ")" "[" AdditiveExpression1 Comparison AdditiveExpression1 "]"
+      "(" <DIGITS> ")" "[" AdditiveExpression1 Comparison AdditiveExpression1 "]"
     ;
 I_K ->
       LogicalAnd Procedure I_K
@@ -170,8 +170,8 @@ Comparison ->
     | ">="
     ;
 EventParameter ->
-      <STRING>
+      <ID>
     ;
 Event ->
-      <STRING>
+      <ID>
     ;

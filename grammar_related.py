@@ -413,6 +413,15 @@ def left_factoring(grammar):
         grammar = {**grammar, **new_grammar}
     return grammar
 
+def get_all_terms(grammar):
+    all_prods=get_all_productions(grammar)
+    terms=set()
+    for prod in all_prods:
+        for ele in prod.right_elements:
+            if ele.type == ELE_TYPE.TERM:
+                terms.add(ele.content)
+    return terms
+
 
 if __name__ == '__main__':
     a = [Element("X"), Element('"abc"')]

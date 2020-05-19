@@ -1,0 +1,14 @@
+letter_: [A-Za-z_]
+digit: [0-9]
+id: letter_(letter_|digit)*
+digits: digit+
+string: (letter_|digit)+
+semicolon: ;
+punctuation: [;\[\],\(\)']
+math_op: [+-*/]
+dot: .
+relation_op: < | > | <= | >= | != | =
+keywords: POLICYID | THEN|  TRUE| ONL| ATM| QUERY|  CHQ| CNP| HISTORY|  OR|  AND|  FALSE
+        | OTH| DD| IF|  ON| | POLICYID| CP| SEQ|
+
+white_space: (blank | tab | newline)+

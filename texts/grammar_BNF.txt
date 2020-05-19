@@ -107,7 +107,7 @@ Boolean ->
     | "TRUE"
     ;
 String ->
-      "'" <STRING> "'"
+      <STRING>
     ;
 Query ->
       "QUERY" StoredProcedure
@@ -170,7 +170,7 @@ Comparison ->
     | ">="
     ;
 EventParameter ->
-      <ID>
+      <ID> "." <ID>
     ;
 Event ->
       <ID>

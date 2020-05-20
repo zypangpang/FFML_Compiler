@@ -3,12 +3,22 @@ from collections import defaultdict
 #from global_var import global_symbol_table
 from constants import  ENDMARK,BUFFER_SIZE,KEYWORDS
 def get_symbol_table():
+    '''
+    Get original symbol table.
+    Put all keywords in advance.
+    :return: symbol table including all keyword entries
+    '''
     symbol_table={}
     for x in KEYWORDS:
         symbol_table[x]={'name':'<KEYWORD>','str':x}
     return symbol_table
 
 def get_dfa(dfa_file):
+    '''
+    Get dfa from file
+    :param dfa_file:
+    :return:
+    '''
     def add_edge(_pstate,_chars,_nstate):
         for _c in _chars:
             T[_pstate][_c]=_nstate
@@ -44,6 +54,8 @@ class Token:
         self.attr=attr
     def __str__(self):
         return f"({self.name}; {self.attr})"
+
+
 class DFA:
     def __init__(self,table,accept_states: dict, start_state: int =0):
         self.__M=table
@@ -75,10 +87,18 @@ class DFA:
         return ans
 
 
-
 class Lexer:
+    '''
+    FFML Lexer
+    '''
     def __init__(self,file,dfa:DFA,symbol_table):
-        self.__buffer=[[]] *2
+        '''
+        Constructor
+        :param file: Code file
+        :param dfa: DFA object
+        :param symbol_table: symbol table
+        '''
+        self.__buffer=[[]] *2 # Reading buffer
 
         self.__lexeme_begin=0
         self.__lexeme_buffer=0
@@ -86,16 +106,22 @@ class Lexer:
         self.__forward = 0
         self.__forward_buffer=0
 
+        self.__cur_line_num=1
+
         self.code_file = file
         self.dfa=dfa
         self.symbol_table=symbol_table
 
         self.eof=False
 
-        self.__loaded=False
+        self.__loaded=False # This bool var is used for forward pointer retraction to avoid loading buffer wrongly
         self.__load_buffer()
 
     def __load_buffer(self):
+        '''
+        load buffer from code file
+        :return:
+        '''
         self.__forward_buffer = self.__forward_buffer ^ 1
         if self.__loaded:
             self.__loaded=False
@@ -105,6 +131,10 @@ class Lexer:
 
 
     def __next_char(self):
+        '''
+        Get next character from code file
+        :return:
+        '''
         if self.eof:
             raise Exception("No more characters")
         buffer=self.__buffer[self.__forward_buffer]
@@ -119,6 +149,10 @@ class Lexer:
         return ans
 
     def __retract(self):
+        '''
+        Retract forward pointer
+        :return:
+        '''
         self.__forward=self.__forward-1
         if self.__forward < 0:
             self.__forward_buffer^=1
@@ -126,6 +160,10 @@ class Lexer:
             self.__loaded=True
 
     def __get_lexeme_str(self):
+        '''
+        Get current lexeme, i.e., chars between lexeme_begin and forward
+        :return:
+        '''
         if self.__lexeme_buffer == self.__forward_buffer:
             return self.__buffer[self.__lexeme_buffer][self.__lexeme_begin:self.__forward]
         else:
@@ -135,11 +173,32 @@ class Lexer:
             return a
 
     def __install_id(self,id):
+        '''
+        Install and return symbol table entry
+        :param id:
+        :return:
+        '''
         if id not in self.symbol_table:
             self.symbol_table[id]={'name':'<ID>','str':id}
         return self.symbol_table[id]
 
+    def get_error_env(self):
+        left = self.__lexeme_begin-10
+        right = self.__lexeme_begin+10
+        if left < 0:
+            left = 0
+        #if right >= BUFFER_SIZE:
+        #    right = BUFFER_SIZE
+        return ''.join(self.__buffer[self.__lexeme_buffer][left:self.__lexeme_begin-1]+['^^']\
+               +self.__buffer[self.__lexeme_buffer][self.__lexeme_begin-1:right])#.replace('\n','\\n')\
+
+    def get_cur_line_num(self):
+        return self.__cur_line_num
     def get_next_token(self):
+        '''
+        Main function: get next token from code file
+        :return: Next token
+        '''
         if self.eof:
             return Token(ENDMARK,{'str':ENDMARK})
 
@@ -161,6 +220,8 @@ class Lexer:
             self.__lexeme_begin=self.__forward
             self.__lexeme_buffer = self.__forward_buffer
             if token_name == "<BLANK>":
+                if '\n' in lexeme:
+                    self.__cur_line_num+=1
                 return self.get_next_token()
             return token
         else:
@@ -168,6 +229,11 @@ class Lexer:
             raise Exception("Lexical Error")
 
 def get_dfa_from_file(path):
+    '''
+    Get DFA from file
+    :param path:
+    :return:
+    '''
     with open(path,'r') as f:
         dfa=get_dfa(f)
     return dfa

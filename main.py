@@ -26,7 +26,7 @@ def get_parse_table(grammar):
 
      #print(ff.check_LL1())
 
-     M = ff.get_parse_table(True)
+     M = ff.get_parse_table()
      return M
      #p_map = get_production_map(grammar)
      #for X in M:
@@ -61,8 +61,10 @@ if __name__ == '__main__':
 
     lexer = Lexer(code_file, get_dfa_from_file(dfa_path), get_symbol_table())
     parser=Parser(grammar,parse_table,start_symbol)
-    parser.parse(lexer)
-
+    try:
+        parser.parse(lexer)
+    except:
+        pass
     code_file.close()
 
 

@@ -9,6 +9,11 @@ class Element:
     """The element of grammar production right part"""
 
     def __init__(self, content, op=''):
+        '''
+        Constructor
+        :param content: str if no op; else list of Element
+        :param op: EBNF combination operator, i.e., +, *, ?
+        '''
         self.content = content
         self.op = op
         if self.op != '':
@@ -33,6 +38,11 @@ class Element:
         return self.content == other.content and self.type == other.type
 
     def __lt__(self, other):
+        '''
+        Nonterminal preceeds terminal
+        :param other:
+        :return:
+        '''
         if not isinstance(other, Element):
             # don't attempt to compare against unrelated types
             return NotImplemented
@@ -45,7 +55,15 @@ class Element:
 
 
 class Production:
+    '''
+    Grammar production
+    '''
     def __init__(self, id: int, left: str, elements: list):
+        '''
+        :param id: unique production id
+        :param left: lhs
+        :param elements: rhs
+        '''
         self.id = id
         self.left = left
         self.right_elements = elements
@@ -79,6 +97,11 @@ class Grammar:
 
 
 def get_production_map(grammar):
+    '''
+    Get the production map: id -> Production object
+    :param grammar: grammar dict
+    :return: production map
+    '''
     production_map = {}
     for x in grammar:
         for prod in grammar[x]:
@@ -87,6 +110,15 @@ def get_production_map(grammar):
 
 
 def read_grammar(file_path, begin_alter, endmark):
+    '''
+    Read grammar from file.
+    Note that this func do not construct Element obj.
+    Only split production rhs
+    :param file_path: file path
+    :param begin_alter: production rhs alternative punctuation mark, e.g. | or None
+    :param endmark: Symbol that marks the end of a production, e.g. ; or .
+    :return: start symbol, grammar dict, nonterminals
+    '''
     grammar = {}
     nonterms = []
     strip_chars = '\n\t ' + begin_alter
@@ -110,10 +142,20 @@ def read_grammar(file_path, begin_alter, endmark):
 
 
 def get_all_productions(grammar):
+    '''
+    get production list throught grammar dict
+    :param grammar:
+    :return:
+    '''
     return reduce(lambda prev, next: prev + next, grammar.values())
 
 
 def process_right(grammar):
+    '''
+    Construct real Element objects
+    :param grammar: grammar dict from read_grammar func
+    :return: grammar dict with Elements
+    '''
     int_id_gen = int_id_generator()
 
     grammar_new = defaultdict(list)
@@ -144,6 +186,14 @@ def process_right(grammar):
 
 
 def get_grammar_from_file(type, file_path, begin_alter, endmark):
+    '''
+    Overall function calls to get final grammar structure from file
+    :param type: EBNF or BNF
+    :param file_path: grammar file path
+    :param begin_alter:
+    :param endmark:
+    :return: start symbol, BNF grammar dict
+    '''
     # EBNF_path = "grammar.txt" if len(sys.argv) <= 1 else sys.argv[1]
     start_symbol, grammar, nonterms = read_grammar(file_path, begin_alter, endmark)
     grammar = process_right(grammar)
@@ -160,6 +210,11 @@ def get_grammar_from_file(type, file_path, begin_alter, endmark):
 
 
 def EBNF_to_BNF(grammar):
+    '''
+    Transform EBNF to BNF, i.e., remove combination parts ? + *
+    :param grammar: grammar dict with Elements
+    :return: BNF grammar dict
+    '''
     int_id_gen = int_id_generator()
     new_name_gen = nonterm_name_generator("R_")
 
@@ -206,8 +261,15 @@ def EBNF_to_BNF(grammar):
     return grammar_new
 
 
-# deprecated. Not correct anymore.
+# deprecated. NOT CORRECT ANYMORE. DO NOT USE.
 def remove_same_symbols(grammar):
+    '''
+    Deprecated.
+    NOT CORRECT ANYMORE.
+    DO NOT USE.
+    :param grammar:
+    :return:
+    '''
     def dfs(G, name, group, visited):
         if name in group:
             return
@@ -236,11 +298,21 @@ def remove_same_symbols(grammar):
 
 
 def sort_grammar(grammar):
+    '''
+    sort grammar productions
+    :param grammar:
+    :return:
+    '''
     for prods in grammar.values():
         prods.sort()
 
 
 def get_nullables(grammar):
+    '''
+    Get nullable nonterminals
+    :param grammar:
+    :return: nullable nonterminals
+    '''
     nullables = set()
     len1 = len(nullables)
     all_prods = get_all_productions(grammar)
@@ -259,32 +331,14 @@ def get_nullables(grammar):
             return nullables
 
 
-'''
-def get_nullables(grammar):
-    nullables=set()
-    len1=len(nullables)
-    while True:
-        for prod in grammar.values():
-            A=prod['left']
-            rights = prod['right']
-            for line in rights:
-                null=True
-                for ele in line:
-                    if ele.content != EMPTY and ele.content not in nullables:
-                        null=False
-                        break
-                if null:
-                    nullables.add(A)
-                    break
-        if len(nullables) > len1:
-            len1=len(nullables)
-        else:
-            return nullables
-'''
-
 
 # deprecated. Use get_nullables instead.
 def get_nullable_nonterms(grammar):
+    '''
+    Deprecated. Use get_nullables instead.
+    :param grammar:
+    :return:
+    '''
     nullable_nts = set()
 
     def is_nullable(element):
@@ -312,6 +366,12 @@ def get_nullable_nonterms(grammar):
 
 
 def remove_empty_productions(grammar, nullable_set):
+    '''
+    Remove empty productions
+    :param grammar:
+    :param nullable_set:
+    :return:
+    '''
     int_id_gen = int_id_generator()
 
     def replace_empty_nt(prod, i, cur_prod: list, res_prods):
@@ -342,6 +402,12 @@ def remove_empty_productions(grammar, nullable_set):
 
 
 def check_left_recursive(grammar, nullables=None):
+    '''
+    Check whether grammar is left recursive
+    :param grammar:
+    :param nullables:
+    :return:
+    '''
     def check_recursive(nt, begin):
         prods = grammar[nt]
         for prod in prods:
@@ -368,6 +434,11 @@ def check_left_recursive(grammar, nullables=None):
 
 
 def left_factoring(grammar):
+    '''
+    Left factor the grammar to yield LL1 grammar
+    :param grammar:
+    :return:
+    '''
     max_id = max([prod.id for prod in get_all_productions(grammar)])
     int_id_gen = int_id_generator(max_id + 1)
 

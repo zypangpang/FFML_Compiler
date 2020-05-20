@@ -1,6 +1,6 @@
 import string
 from collections import defaultdict
-from global_var import global_symbol_table
+#from global_var import global_symbol_table
 from constants import  ENDMARK,BUFFER_SIZE,KEYWORDS
 def get_symbol_table():
     symbol_table={}
@@ -141,7 +141,7 @@ class Lexer:
 
     def get_next_token(self):
         if self.eof:
-            raise Exception("Reach EOF")
+            return Token(ENDMARK,{'str':ENDMARK})
 
         s=self.dfa.get_start_state()
         ps=s

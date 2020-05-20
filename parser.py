@@ -44,19 +44,23 @@ class Parser:
         X=stack[-1]
         while X.content!=ENDMARK:
             a=self.__get_token_info(token)
+            #print(a)
             if X.type==ELE_TYPE.TERM:
-                if X==a: # need expansion
+                if X.content==a: # need expansion
                     stack.pop()
                     token=lexer.get_next_token()
                 else:
+                    print(X,token)
                     raise Exception("parse error")
             elif a not in self.__M[X.content]:
+                print(X,token)
                 raise Exception("parse error")
             else:
-                prod=self.__p_map[self.__M[X.content,a]]
+                prod=self.__p_map[self.__M[X.content][a]]
+                #print(prod)
                 stack.pop()
                 if prod.right_elements[0].content != EMPTY:
-                    stack.extend(prod.right_elements.reverse())
+                    stack.extend(reversed(prod.right_elements))
             X=stack[-1]
 
 

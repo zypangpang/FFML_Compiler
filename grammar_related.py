@@ -15,6 +15,7 @@ class Element:
             self.type = ELE_TYPE.COMBI
         elif self.content[0] in TERM_BEGIN_CHARS:
             self.type = ELE_TYPE.TERM
+            self.content=self.content.strip('"')
         else:
             self.type = ELE_TYPE.NONTERM
 

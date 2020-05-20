@@ -1,4 +1,5 @@
 import string
+from collections import defaultdict
 from global_var import global_symbol_table
 from constants import  ENDMARK,BUFFER_SIZE
 
@@ -7,7 +8,7 @@ def get_dfa(dfa_file):
         for _c in _chars:
             T[_pstate][_c]=_nstate
     state_num,edge_num,start_state=(int(x) for x in dfa_file.readline().strip().split())
-    T=[{}]*state_num
+    T=defaultdict(dict)
     digit = string.digits
     letters_ = string.ascii_letters + '_'
     ws='\t\n '
@@ -36,6 +37,8 @@ class Token:
     def __init__(self,name,attr: dict):
         self.name=name
         self.attr=attr
+    def __str__(self):
+        return f"({self.name}; {self.attr})"
 class DFA:
     def __init__(self,table,accept_states: dict, start_state: int =0):
         self.__M=table
@@ -62,7 +65,7 @@ class DFA:
         return None
     def __str__(self):
         ans=""
-        for i,d in enumerate(self.__M):
+        for i,d in self.__M.items():
             ans+=f"{i}: {d}\n"
         return ans
 
@@ -83,10 +86,14 @@ class Lexer:
 
         self.eof=False
 
+        self.__loaded=False
         self.__load_buffer()
 
     def __load_buffer(self):
         self.__forward_buffer = self.__forward_buffer ^ 1
+        if self.__loaded:
+            self.__loaded=False
+            return
         self.__buffer[self.__forward_buffer]=list(self.code_file.read(BUFFER_SIZE))
         self.__buffer[self.__forward_buffer].append(ENDMARK)
 
@@ -96,11 +103,10 @@ class Lexer:
             raise Exception("No more characters")
         buffer=self.__buffer[self.__forward_buffer]
         ans=buffer[self.__forward]
+        next=self.__forward+1
         if ans == ENDMARK:
             self.eof=True
-            return ans
-        next=self.__forward+1
-        if buffer[next]==ENDMARK and next == len(buffer)-1:
+        elif buffer[next]==ENDMARK and next == BUFFER_SIZE:
             self.__load_buffer()
             next=0
         self.__forward=next
@@ -111,30 +117,36 @@ class Lexer:
         if self.__forward < 0:
             self.__forward_buffer^=1
             self.__forward=BUFFER_SIZE-1
+            self.__loaded=True
 
     def __get_lexeme_str(self):
         if self.__lexeme_buffer == self.__forward_buffer:
             return self.__buffer[self.__lexeme_buffer][self.__lexeme_begin:self.__forward]
         else:
-            return self.__buffer[self.__lexeme_buffer][self.__lexeme_begin:-1]\
+            a=self.__buffer[self.__lexeme_buffer][self.__lexeme_begin:-1]\
                    + self.__buffer[self.__forward_buffer][0:self.__forward]
+            #print(''.join(a))
+            return a
 
     def get_next_token(self):
         if self.eof:
             raise Exception("Reach EOF")
 
         s=self.dfa.get_start_state()
+        ps=s
         while s is not None:
+            ps = s
             c=self.__next_char()
             s = self.dfa.move(s, c)
         self.__retract()
-        token_name=self.dfa.accept(s)
+        token_name=self.dfa.accept(ps)
         if token_name:
-            token = Token(token_name,{'str':self.__get_lexeme_str()})
+            token = Token(token_name,{'str':''.join(self.__get_lexeme_str())})
             self.__lexeme_begin=self.__forward
-            self.__lexeme_begin = self.__forward_buffer
+            self.__lexeme_buffer = self.__forward_buffer
             return token
         else:
+            #print(self.__next_char())
             raise Exception("Lexical Error")
 
 
@@ -143,7 +155,6 @@ if __name__ == '__main__':
     code_path='test_code.txt'
     with open(dfa_path,'r') as f:
         dfa=get_dfa(f)
-    print(dfa)
     code_file=open(code_path,'r')
     lexer=Lexer(code_file,dfa)
     try:

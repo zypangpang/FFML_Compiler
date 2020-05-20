@@ -19,4 +19,4 @@ EMPTY = '#'
 ENDMARK = '$'
 TERM_BEGIN_CHARS = f'"<{EMPTY}'
 
-BUFFER_SIZE=4096 #bytes
+BUFFER_SIZE= 16 #bytes

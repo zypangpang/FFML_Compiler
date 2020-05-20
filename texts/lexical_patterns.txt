@@ -8,6 +8,6 @@ math_op: [+-*/]
 dot: .
 relation_op: < | > | <= | >= | != | =
 keywords: POLICYID | THEN|  TRUE| ONL| ATM| QUERY|  CHQ| CNP| HISTORY|  OR|  AND|  FALSE
-        | OTH| DD| IF|  ON| | POLICYID| CP| SEQ|
+        | OTH| DD| IF|  ON| | CP| SEQ|
 
 white_space: (blank | tab | newline)+

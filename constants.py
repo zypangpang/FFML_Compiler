@@ -20,3 +20,6 @@ ENDMARK = '$'
 TERM_BEGIN_CHARS = f'"<{EMPTY}'
 
 BUFFER_SIZE= 16 #bytes
+
+KEYWORDS=['POLICYID' , 'THEN',  'TRUE', 'ONL', 'ATM', 'QUERY',  'CHQ', 'CNP', 'HISTORY',  'OR',  'AND',  'FALSE'
+        , 'OTH', 'DD', 'IF',  'ON', 'CP', 'SEQ',]

@@ -1,7 +1,12 @@
 import string
 from collections import defaultdict
 from global_var import global_symbol_table
-from constants import  ENDMARK,BUFFER_SIZE
+from constants import  ENDMARK,BUFFER_SIZE,KEYWORDS
+def get_symbol_table():
+    symbol_table={}
+    for x in KEYWORDS:
+        symbol_table[x]={'name':'<KEYWORD>','str':x}
+    return symbol_table
 
 def get_dfa(dfa_file):
     def add_edge(_pstate,_chars,_nstate):
@@ -72,7 +77,7 @@ class DFA:
 
 
 class Lexer:
-    def __init__(self,file,dfa:DFA):
+    def __init__(self,file,dfa:DFA,symbol_table):
         self.__buffer=[[]] *2
 
         self.__lexeme_begin=0
@@ -83,6 +88,7 @@ class Lexer:
 
         self.code_file = file
         self.dfa=dfa
+        self.symbol_table=symbol_table
 
         self.eof=False
 
@@ -128,6 +134,11 @@ class Lexer:
             #print(''.join(a))
             return a
 
+    def __install_id(self,id):
+        if id not in self.symbol_table:
+            self.symbol_table[id]={'name':'<ID>','str':id}
+        return self.symbol_table[id]
+
     def get_next_token(self):
         if self.eof:
             raise Exception("Reach EOF")
@@ -141,14 +152,25 @@ class Lexer:
         self.__retract()
         token_name=self.dfa.accept(ps)
         if token_name:
-            token = Token(token_name,{'str':''.join(self.__get_lexeme_str())})
+            lexeme=''.join(self.__get_lexeme_str())
+            if token_name == '<ID>':
+                st_obj=self.__install_id(lexeme)
+                token = Token(token_name,{'entry':st_obj})
+            else:
+                token = Token(token_name,{'str':lexeme})
             self.__lexeme_begin=self.__forward
             self.__lexeme_buffer = self.__forward_buffer
+            if token_name == "<BLANK>":
+                return self.get_next_token()
             return token
         else:
             #print(self.__next_char())
             raise Exception("Lexical Error")
 
+def get_dfa_from_file(path):
+    with open(path,'r') as f:
+        dfa=get_dfa(f)
+    return dfa
 
 if __name__ == '__main__':
     dfa_path='lexer/dfa.txt'
@@ -156,7 +178,7 @@ if __name__ == '__main__':
     with open(dfa_path,'r') as f:
         dfa=get_dfa(f)
     code_file=open(code_path,'r')
-    lexer=Lexer(code_file,dfa)
+    lexer=Lexer(code_file,dfa,get_symbol_table())
     try:
         while True:
             print(lexer.get_next_token())

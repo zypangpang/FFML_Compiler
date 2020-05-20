@@ -9,19 +9,45 @@ class Parser:
         self.__grammar=grammar
         self.__p_map=get_production_map(grammar)
 
+    def __get_token_info(self,token):
+        if token.name == "<ID>":
+            entry=token.attr['entry']
+            if entry['name']=='<KEYWORD>':
+                return entry['str']
+            else:
+                return token.name
+        if token.name == '<DIGITS>' or token.name == '<STRING>':
+            return token.name
+        return token.attr['str']
+
+    '''
+    def __equals(self,X, token):
+        if token.name == "<ID>":
+            entry=token.attr['entry']
+            if entry['name']=='<KEYWORD>':
+                return entry['str']==X
+            else:
+                return token.name == X
+        if token.name == '<DIGITS>' or token.name == '<STRING>':
+            return X == token.name
+        return X == token.attr['str']
+    '''
+
+
     def parse(self,lexer):
         # init parsing stack
         stack=deque()
         stack.append(Element(ENDMARK))
-        stack.append(self.__ss)
+        stack.append(Element(self.__ss))
 
-        a=lexer.get_next_token()
+        token=lexer.get_next_token()
         X=stack[-1]
         while X.content!=ENDMARK:
+            a=self.__get_token_info(token)
             if X.type==ELE_TYPE.TERM:
                 if X==a: # need expansion
                     stack.pop()
-                    a=lexer.get_next_token()
+                    token=lexer.get_next_token()
                 else:
                     raise Exception("parse error")
             elif a not in self.__M[X.content]:

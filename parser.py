@@ -60,11 +60,18 @@ class Parser:
 
         token=lexer.get_next_token()
         X=stack[-1]
+
+        root={'name':"","children":[]}
+        cur_node=root
+
         while X.content!=ENDMARK:
             a=self.__get_token_info(token)
             #print(a)
             if X.type==ELE_TYPE.TERM:
                 if X.content==a: # need expansion
+
+                    cur_node['children'].append({"name":X.content,"children":[]})
+
                     stack.pop()
                     token=lexer.get_next_token()
                 else:
@@ -78,11 +85,17 @@ class Parser:
                 raise Exception("Syntax error")
             else:
                 prod=self.__p_map[self.__M[X.content][a]]
+
+                tnode={"name": X.content, "children": []}
+                cur_node['children'].append(tnode)
+                cur_node=tnode
+
                 #print(prod)
                 stack.pop()
                 if prod.right_elements[0].content != EMPTY:
                     stack.extend(reversed(prod.right_elements))
             X=stack[-1]
+        return root
 
 
 

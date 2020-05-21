@@ -61,10 +61,11 @@ if __name__ == '__main__':
 
     lexer = Lexer(code_file, get_dfa_from_file(dfa_path), get_symbol_table())
     parser=Parser(grammar,parse_table,start_symbol)
-    try:
-        parser.parse(lexer)
-    except:
-        pass
+    #try:
+    root=parser.parse(lexer)
+    print(root)
+    #except:
+    #    pass
     code_file.close()
 
 

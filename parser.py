@@ -38,11 +38,14 @@ class Parser:
         return X == token.attr['str']
     '''
 
-    def __print_error_str(self,lexer):
+    def __print_error_str(self,lexer,expect,given):
         print(f"Syntax error at line {lexer.get_cur_line_num()}")
         print("<<<<<<<<<<<")
-        print(lexer.get_error_env())
+        left,right=lexer.get_error_context()
+        print(left,"^^",right)
         print(">>>>>>>>>>>")
+        print(f"Expect {expect}")
+        print(f"But '{given}' is given")
 
     def parse(self,lexer):
         '''
@@ -65,14 +68,12 @@ class Parser:
                     stack.pop()
                     token=lexer.get_next_token()
                 else:
-                    self.__print_error_str(lexer)
-                    print(f"Need a '{X.content}', but '{a}' is given")
+                    self.__print_error_str(lexer,X.content,a)
                     #print(X,token)
                     raise Exception("Syntax error")
             elif a not in self.__M[X.content]:
-                self.__print_error_str(lexer)
-                print(f"Expect {tuple(self.__M[X.content].keys())}")
-                print(f"But '{token.attr['entry']['str'] if token.name=='<ID>' else token.attr['str']}' is given")
+                self.__print_error_str(lexer,tuple(self.__M[X.content].keys()),
+                                       token.attr['entry']['str'] if token.name=='<ID>' else token.attr['str'])
                 #print(X,token)
                 raise Exception("Syntax error")
             else:

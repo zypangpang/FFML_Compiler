@@ -182,15 +182,15 @@ class Lexer:
             self.symbol_table[id]={'name':'<ID>','str':id}
         return self.symbol_table[id]
 
-    def get_error_env(self):
+    def get_error_context(self):
         left = self.__lexeme_begin-10
         right = self.__lexeme_begin+10
         if left < 0:
             left = 0
         #if right >= BUFFER_SIZE:
         #    right = BUFFER_SIZE
-        return ''.join(self.__buffer[self.__lexeme_buffer][left:self.__lexeme_begin-1]+['^^']\
-               +self.__buffer[self.__lexeme_buffer][self.__lexeme_begin-1:right])#.replace('\n','\\n')\
+        return ''.join(self.__buffer[self.__lexeme_buffer][left:self.__lexeme_begin-1]),\
+               ''.join(self.__buffer[self.__lexeme_buffer][self.__lexeme_begin-1:right]) #.replace('\n','\\n')\
 
     def get_cur_line_num(self):
         return self.__cur_line_num
@@ -204,10 +204,12 @@ class Lexer:
 
         s=self.dfa.get_start_state()
         ps=s
+        cur_str=""
         while s is not None:
             ps = s
             c=self.__next_char()
             s = self.dfa.move(s, c)
+            cur_str+=c
         self.__retract()
         token_name=self.dfa.accept(ps)
         if token_name:
@@ -226,7 +228,8 @@ class Lexer:
             return token
         else:
             #print(self.__next_char())
-            raise Exception("Lexical Error")
+            print(f"Unrecognized string: '{cur_str}'")
+            raise Exception("Lexical Error: "+cur_str)
 
 def get_dfa_from_file(path):
     '''

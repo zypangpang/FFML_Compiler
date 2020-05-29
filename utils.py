@@ -67,7 +67,7 @@ def output_formatted_grammar(start_symbol, grammar, deduce_symbol, begin_alter, 
                 first = False
             else:
                 output = indent + begin_alter + " "
-            output = output + " ".join([e.content for e in line])
+            output = output + " ".join([f'"{e.content}"' if e.type==ELE_TYPE.TERM else e.content for e in line])
             print(output)
         print(indent + endmark)
 

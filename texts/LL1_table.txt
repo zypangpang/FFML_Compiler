@@ -1,0 +1,294 @@
+PolicyList :
+    POLICYID 0
+#
+I_A :
+    POLICYID 1
+    $ 2
+#
+I_B :
+    IF 3
+    THEN 4
+#
+PolicyStatement :
+    POLICYID 5
+#
+PolicyId :
+    POLICYID 6
+#
+I_C :
+    OR 7
+    IF 8
+    THEN 8
+#
+EventStatement :
+    ON 9
+#
+SingleEvent :
+    DD 10
+    ONL 10
+    OTH 10
+    ATM 10
+    CP 10
+    CHQ 10
+    CNP 10
+#
+Channel :
+    ATM 11
+    CHQ 12
+    CNP 13
+    CP 14
+    DD 15
+    ONL 16
+    OTH 17
+#
+EventList :
+    SEQ 18
+    [ 19
+#
+I_D :
+    [ 20
+    ( 21
+#
+I_E :
+    ] 22
+    , 23
+#
+Sequence :
+    SEQ 24
+#
+Instance :
+    <ID> 25
+#
+I_F :
+    AND 26
+    OR 26
+    THEN 27
+#
+ConditionStatement :
+    IF 28
+#
+LogicalOperator :
+    AND 29
+    OR 30
+#
+SingleCondition :
+    TRUE 31
+    QUERY 31
+    <DIGITS> 31
+    ( 31
+    FALSE 31
+    <STRING> 31
+    <ID> 31
+    HISTORY 32
+#
+I_G :
+    / 33
+    * 33
+    AND 34
+    != 34
+    ) 34
+    - 34
+    ] 34
+    THEN 34
+    = 34
+    <= 34
+    < 34
+    OR 34
+    + 34
+    >= 34
+    > 34
+#
+I_H :
+    - 35
+    + 35
+    AND 36
+    != 36
+    ) 36
+    ] 36
+    THEN 36
+    = 36
+    <= 36
+    < 36
+    OR 36
+    >= 36
+    > 36
+#
+AdditiveExpression1 :
+    TRUE 37
+    <DIGITS> 37
+    ( 37
+    FALSE 37
+    <STRING> 37
+    <ID> 37
+    QUERY 38
+#
+AdditiveExpression2 :
+    + 39
+    - 40
+#
+FactorExpression1 :
+    TRUE 41
+    <DIGITS> 41
+    ( 41
+    FALSE 41
+    <STRING> 41
+    <ID> 41
+#
+FactorExpression2 :
+    * 42
+    / 43
+#
+Factors :
+    FALSE 44
+    TRUE 44
+    <ID> 45
+    <DIGITS> 46
+    <STRING> 47
+    ( 48
+#
+IntegerLiteral :
+    <DIGITS> 49
+#
+Boolean :
+    FALSE 50
+    TRUE 51
+#
+String :
+    <STRING> 52
+#
+Query :
+    QUERY 53
+#
+StoredProcedure :
+    <ID> 54
+#
+I_I :
+    ONL 55
+    DD 55
+    OTH 55
+    ( 55
+    ATM 55
+    ) 55
+    CP 55
+    <DIGITS> 55
+    CHQ 55
+    CNP 55
+    <ID> 55
+    , 56
+#
+Parameters :
+    ONL 57
+    DD 57
+    OTH 57
+    ( 57
+    ATM 57
+    CP 57
+    <DIGITS> 57
+    CHQ 57
+    CNP 57
+    <ID> 57
+#
+ParamInput :
+    ONL 58
+    DD 58
+    OTH 58
+    ( 58
+    ATM 58
+    CP 58
+    CHQ 58
+    CNP 58
+    <ID> 59
+    <DIGITS> 60
+#
+I_J :
+    ) 61
+    , 62
+#
+ChannelList :
+    DD 63
+    ONL 63
+    OTH 63
+    ATM 63
+    CP 63
+    CHQ 63
+    CNP 63
+    ( 64
+#
+HistoryStatement :
+    HISTORY 65
+#
+HistInput :
+    ( 66
+#
+I_K :
+    AND 67
+    ; 68
+#
+ActionStatement :
+    THEN 69
+#
+I_L :
+    ONL 70
+    DD 70
+    OTH 70
+    ( 70
+    ATM 70
+    CP 70
+    <DIGITS> 70
+    CHQ 70
+    CNP 70
+    <ID> 70
+    ) 71
+#
+Procedure :
+    <ID> 72
+#
+LogicalAnd :
+    AND 73
+#
+LogicalOr :
+    OR 74
+#
+Comparison :
+    != 75
+    < 76
+    <= 77
+    = 78
+    > 79
+    >= 80
+#
+EventParameter :
+    <ID> 81
+#
+Event :
+    <ID> 82
+#
+F_A :
+    AND 83
+    DD 83
+    OTH 83
+    * 83
+    != 83
+    ] 83
+    THEN 83
+    CHQ 83
+    <ID> 83
+    , 83
+    / 83
+    < 83
+    OR 83
+    >= 83
+    CP 83
+    > 83
+    ) 83
+    - 83
+    <DIGITS> 83
+    ( 83
+    = 83
+    CNP 83
+    <= 83
+    ONL 83
+    + 83
+    ATM 83
+    . 84
+#

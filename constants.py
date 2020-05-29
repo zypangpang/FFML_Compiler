@@ -27,3 +27,5 @@ BUFFER_SIZE= 4096 #bytes
 # Reserved keywords
 KEYWORDS=['POLICYID' , 'THEN',  'TRUE', 'ONL', 'ATM', 'QUERY',  'CHQ', 'CNP', 'HISTORY',  'OR',  'AND',  'FALSE'
         , 'OTH', 'DD', 'IF',  'ON', 'CP', 'SEQ',]
+
+COMMENT_SYM = '//'

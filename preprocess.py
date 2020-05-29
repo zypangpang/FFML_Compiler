@@ -1,44 +1,20 @@
-from constants import ELE_TYPE
-from grammar_related import Element
-def remove_left_recursive(grammar):
-    nonterminals=[A for A in grammar]
-    n=len(nonterminals)
-    for i in range(n):
-        Ai = nonterminals[i]
-        rights = grammar[Ai]['right']
-        for j in range(i):
-            Aj=nonterminals[j]
-            change_dict={}
-            for k in range(len(rights)):
-                rhs=rights[k]
-                if rhs[0].type == ELE_TYPE.NONTERM:
-                    first_nt=rhs[0].symbols[0]
-                    if first_nt == Aj:
-                        new_prods=[Aj_prod + rhs[1:] for Aj_prod in grammar[Aj]['right']]
-                        change_dict[k]=new_prods
+from constants import COMMENT_SYM
 
-                elif rhs[0].type == ELE_TYPE.COMBI:
-                    first_nt = rhs[0].symbols[0].symbols[0]
-                    if first_nt == Aj:
-                        new_prods = []
-                        for prod in grammar[Aj]['right']:
-                            new_first_combi=Element([prod]+rhs[0].symbols[1:], rhs[0].op)
-                            new_prods.append([new_first_combi]+rhs[1:])
-                        change_dict[k]=new_prods
-            for pos in change_dict:
-                rights[pos:pos+1]=change_dict[pos]
+class Preprocessor:
+    def __init__(self,file_path):
+        self.file_path=file_path
+        self.new_file_path=self.file_path+'.pre'
 
-        nt_prods=[]
-        term_prods=[]
-        for rhs in rights:
-            if rhs[0].type==ELE_TYPE.NONTERM:
-                if rhs[0].symbols[0]
-
-        for rhs in rights:
-            if rhs[0].type == ELE_TYPE.NONTERM:
-                first_nt=rhs[0].symbols[0]
-                if first_nt == Ai:
-                    nt_prods=[]
-
-
-
+    def remove_blank(self,line):
+        return line.strip()
+    def remove_comment(self,line):
+        comm_begin=line.find(COMMENT_SYM)
+        return line[:comm_begin] if comm_begin != -1 else line
+    def process(self):
+        with open(self.file_path,'r') as rf:
+            with open(self.new_file_path,'w') as wf:
+                for line in rf:
+                    line=self.remove_blank(line)
+                    line=self.remove_comment(line)
+                    wf.write(line+'\n')
+        return self.new_file_path

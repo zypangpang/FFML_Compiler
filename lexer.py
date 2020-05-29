@@ -222,8 +222,7 @@ class Lexer:
             self.__lexeme_begin=self.__forward
             self.__lexeme_buffer = self.__forward_buffer
             if token_name == "<BLANK>":
-                if '\n' in lexeme:
-                    self.__cur_line_num+=1
+                self.__cur_line_num+=lexeme.count('\n')
                 return self.get_next_token()
             return token
         else:

@@ -5,6 +5,7 @@ from first_follow_set import FirstFollowSet
 from constants import EMPTY
 from lexer import Lexer,get_symbol_table,get_dfa_from_file
 from parser import  Parser
+from preprocess import Preprocessor
 
 
 def check_nullable(ff: FirstFollowSet):
@@ -15,6 +16,7 @@ def check_nullable(ff: FirstFollowSet):
             print(A)
 
 def get_parse_table(grammar):
+     grammar = left_factoring(grammar)
      ff = FirstFollowSet(grammar=grammar, ss=start_symbol)
      #first_set = ff.first_set()
      #follow_set = ff.follow_set()
@@ -35,41 +37,52 @@ def get_parse_table(grammar):
      #       print(f"    {a}: {p_map[M[X][a]]}")
     # for p in M[X][a]:
     #    print(f"        {p_map[p]}")
-
+def output_parse_table(M,endmark):
+    for x in M:
+        print(f"{x} :")
+        for a,b in M[x].items():
+            print(f"    {a} {b}")
+        print(endmark)
+def read_parse_table(file_path,endmark):
+    M = {}
+    strip_chars = '\n\t '
+    with open(file_path, "r") as f:
+        line = f.readline().strip(strip_chars)
+        while line:
+            row = line.split()[0]
+            # production = {'left': left, 'right': []}
+            col = {}
+            right = f.readline().strip(strip_chars).split()
+            while right[0] != endmark:
+                col[right[0]]=int(right[1])
+                right = f.readline().strip(strip_chars).split()
+            M[row] = col
+            line = f.readline().strip(strip_chars)
+    return M
 
 if __name__ == '__main__':
-    path = "texts/grammar_BNF.txt" if len(sys.argv) <= 1 else sys.argv[1]
+    path = "texts/grammar_LL1.txt" if len(sys.argv) <= 1 else sys.argv[1]
+    M_path="texts/LL1_table.txt"
     start_symbol, grammar = get_grammar_from_file('BNF', path, '|', ';')
-    # format_print(print_dict, "Production",True)(grammar)
-    # format_print(print_set, "BNF",True)(new_grammar)
-    # format_print(print_set, "BNF",True)(new_grammar)
-    # nullables=get_nullables(grammar)
-    # print(nullables)
-    # grammar=remove_empty_productions(grammar,nullables)
-    # output_formatted_grammar(start_symbol,grammar,'->','|',';')
 
-    # rnts = check_left_recursive(grammar)
-    # print(rnts)
-    grammar = left_factoring(grammar)
-    # output_formatted_grammar(start_symbol,grammar,'->','|',';')
-    #format_print(print_dict, "Prod", True)(grammar)
-    parse_table = get_parse_table(grammar)
+    #grammar=left_factoring(grammar)
+    #output_formatted_grammar(start_symbol,grammar,'->','|',';')
+
+    #parse_table=get_parse_table(grammar)
+    #output_parse_table(parse_table,"#")
+
+    parse_table=read_parse_table(M_path,'#')
 
     dfa_path = 'lexer/dfa.txt'
     code_path = 'test_code.txt'
-    code_file = open(code_path, 'r')
+    preprocessor=Preprocessor(code_path)
+    new_code_path=preprocessor.process()
+    code_file = open(new_code_path, 'r')
 
     lexer = Lexer(code_file, get_dfa_from_file(dfa_path), get_symbol_table())
     parser=Parser(grammar,parse_table,start_symbol)
-    #try:
     root=parser.parse(lexer)
-    print(root)
-    #except:
-    #    pass
+    #print(root)
+    
     code_file.close()
-
-
-
-    # remove_same_symbols(new_grammar)
-
 

@@ -2,6 +2,16 @@ from collections import deque
 from constants import  ENDMARK,ELE_TYPE,EMPTY
 from grammar_related import get_production_map,Element
 #from lexer import Lexer
+class ASTNode:
+    def __init__(self,name,parent,children):
+        self.name=name
+        self.children=children
+        self.parent=parent
+        if parent is None:
+            self.depth=0
+        else:
+            self.depth=parent.depth+1
+
 class Parser:
     def __init__(self,grammar,parse_table,start_symbol):
         self.__M=parse_table
@@ -54,14 +64,15 @@ class Parser:
         :return:
         '''
         # init parsing stack
+        root=ASTNode("",None,[])
         stack=deque()
         stack.append(Element(ENDMARK))
-        stack.append(Element(self.__ss))
+        start_ele=Element(self.__ss,AST_parent=root)
+        stack.append(start_ele)
 
         token=lexer.get_next_token()
         X=stack[-1]
 
-        root={'name':"","children":[]}
         cur_node=root
 
         while X.content!=ENDMARK:
@@ -70,7 +81,9 @@ class Parser:
             if X.type==ELE_TYPE.TERM:
                 if X.content==a: # need expansion
 
-                    cur_node['children'].append({"name":X.content,"children":[]})
+                    #cur_node['children'].append({"name":X.content,"children":[]})
+                    #X.AST_parent['children'].append({"name":X.content,"children":[]})
+                    X.AST_parent.children.append(ASTNode(X.content,X.AST_parent,[]))
 
                     stack.pop()
                     token=lexer.get_next_token()
@@ -86,16 +99,18 @@ class Parser:
             else:
                 prod=self.__p_map[self.__M[X.content][a]]
 
-                tnode={"name": X.content, "children": []}
-                cur_node['children'].append(tnode)
-                cur_node=tnode
+                #tnode={"name": X.content, "children": []}
+                tnode=ASTNode(X.content,X.AST_parent,[])
+                X.AST_parent.children.append(tnode)
 
                 #print(prod)
                 stack.pop()
                 if prod.right_elements[0].content != EMPTY:
+                    for e in prod.right_elements:
+                        e.AST_parent=tnode
                     stack.extend(reversed(prod.right_elements))
             X=stack[-1]
-        return root
+        return root.children[0]
 
 
 

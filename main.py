@@ -1,5 +1,5 @@
 import sys
-from utils import format_print, print_dict, output_formatted_grammar
+from utils import print_tree
 from grammar_related import get_grammar_from_file, left_factoring, get_production_map,get_all_terms
 from first_follow_set import FirstFollowSet
 from constants import EMPTY
@@ -82,7 +82,8 @@ if __name__ == '__main__':
     lexer = Lexer(code_file, get_dfa_from_file(dfa_path), get_symbol_table())
     parser=Parser(grammar,parse_table,start_symbol)
     root=parser.parse(lexer)
-    #print(root)
-    
+    #root={"name":'test',"children":[{"name":"c1","children":[{"name":"cc1","children":[]}]},{"name":"c2","children":[]}]}
+    print_tree(root,0)
+
     code_file.close()
 

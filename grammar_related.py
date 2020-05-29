@@ -8,7 +8,7 @@ from collections import defaultdict
 class Element:
     """The element of grammar production right part"""
 
-    def __init__(self, content, op=''):
+    def __init__(self, content, op=None, AST_parent=None):
         '''
         Constructor
         :param content: str if no op; else list of Element
@@ -16,7 +16,8 @@ class Element:
         '''
         self.content = content
         self.op = op
-        if self.op != '':
+        self.AST_parent=AST_parent
+        if self.op is not None:
             self.type = ELE_TYPE.COMBI
         elif self.content[0] in TERM_BEGIN_CHARS:
             self.type = ELE_TYPE.TERM

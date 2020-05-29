@@ -94,3 +94,13 @@ def output_formatted_grammar_online(start_symbol, grammar, deduce_symbol, begin_
 def prod_to_str(left, right):
     right_str = " ".join([ele.content for ele in right])
     return f"{left}->{right_str}"
+
+def print_tree(root,depth,last=False):
+    if last:
+        print("┆ "*depth+"┖┄"+root.name)
+    else:
+        print("┆ " * depth  + "┠┄" + root.name)
+    for c in root.children[:-1]:
+        print_tree(c,depth+1)
+    if root.children:
+        print_tree(root.children[-1],depth+1,True)

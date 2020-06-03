@@ -65,10 +65,10 @@ if __name__ == '__main__':
     M_path="texts/LL1_table.txt"
     start_symbol, grammar = get_grammar_from_file('BNF', path, '|', ';')
 
-    t=get_all_productions(grammar)
-    t.sort()
-    for p in t:
-        print(p)
+    #t=get_all_productions(grammar)
+    #t.sort()
+    #for p in t:
+    #    print(p)
 
     #grammar=left_factoring(grammar)
     #output_formatted_grammar(start_symbol,grammar,'->','|',';')
@@ -76,7 +76,6 @@ if __name__ == '__main__':
     #parse_table=get_parse_table(grammar)
     #output_parse_table(parse_table,"#")
 
-    '''
     parse_table=read_parse_table(M_path,'#')
 
     dfa_path = 'lexer/dfa.txt'
@@ -87,10 +86,9 @@ if __name__ == '__main__':
 
     lexer = Lexer(code_file, get_dfa_from_file(dfa_path), get_symbol_table())
     parser=Parser(grammar,parse_table,start_symbol)
-    root=parser.parse(lexer)
+    root=parser.nonrecursive_parse(lexer)
     #root={"name":'test',"children":[{"name":"c1","children":[{"name":"cc1","children":[]}]},{"name":"c2","children":[]}]}
     print_tree(root,0)
 
     code_file.close()
-    '''
 

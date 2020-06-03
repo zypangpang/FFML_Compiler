@@ -1,0 +1,105 @@
+0: PolicyList -> PolicyStatement I_A    PolicyList.node=I_A.syn
+                                        I_A.inh=PolicyStatement.node
+1: I_A -> PolicyStatement I_A   I_A.syn=I_A'.syn
+                                I_A'.inh=[I_A.inh,PolicyStatement.node]
+2: I_A -> #    I_A.syn=make_node('PolicyList',I_A.inh) # make_node(root_name,children_list)
+3: I_B -> ConditionStatement    I_B.syn=ConditionStatement.node
+4: I_B -> #    I_B.syn=None
+5: PolicyStatement -> PolicyId EventStatement I_B ActionStatement ;    PolicyStatement.node=make_node('PolicyStatement',
+                                                                               [PolicyId.syn,EventStatement.node,I_B.syn,
+                                                                               ActionStatement.node])
+6: PolicyId -> POLICYID [ String ]    PolicyId.syn=String.node
+7: I_C -> LogicalOr SingleEvent I_C    I_C.syn=I_C'.syn
+                                       I_C'.inh=[I_C.inh,SingleEvent.node]
+
+8: I_C -> #    I_C.syn=make_node('EventStatement',I_C.inh)
+9: EventStatement -> ON SingleEvent I_C    EventStatement.node=I_C.syn
+                                           I_C.inh=SingleEvent.node
+10: SingleEvent -> Channel EventList    SingleEvent.node=make_node('SingleEvent',[Channel.node,EventList.syn]
+11: Channel -> ATM    Channel.node=make_node('ATM',[])
+12: Channel -> CHQ    Channel.node=make_node('CHQ',[])
+13: Channel -> CNP    Channel.node=make_node('CNP',[])
+14: Channel -> CP     ...
+15: Channel -> DD
+16: Channel -> ONL
+17: Channel -> OTH
+18: EventList -> Sequence    EventList.syn=Sequence.node
+19: EventList -> [ Event ]    EventList.syn=Event.node
+20: I_D -> #    I_D.syn=None
+21: I_D -> ( IntegerLiteral )    I_D.syn=IntegerLiteral.node
+22: I_E -> #    I_E.syn=make_node('EventSeq',I_E.inh)
+23: I_E -> , Event I_E    I_E.syn=I_E'.syn
+                          I_E'.inh=[I_E.inh,Event.node]
+24: Sequence -> SEQ I_D [ Event , Event I_E ]    Sequence.node=make_node('Sequence',[I_D.syn,I_E.syn])
+                                                 I_E.inh=[Event1.node, Event2.node]
+25: Instance -> <ID>    Instance.node=make_node('<ID>',[])
+26: I_F -> LogicalOperator SingleCondition I_F    I_F.syn=I_F'.syn
+                                                  I_F'.inh=[I_F.inh,LogicalOperator.syn,SingleCondition.node]
+27: I_F -> #    I_F.syn=make_node('ConditionStatement',I_F.inh)
+28: ConditionStatement -> IF SingleCondition I_F    ConditionStatement.node=I_F.syn
+                                                    I_F.inh=SingleCondition.node
+29: LogicalOperator -> LogicalAnd    LogicalOperator.syn=LogicalAnd.node
+30: LogicalOperator -> LogicalOr     LogicalOperator.syn=LogicalOr.node
+31: SingleCondition -> AdditiveExpression1 Comparison AdditiveExpression1    SingleCondition.node=make_node('SingleCondition',
+                                                                                [AdditiveExpression1_1.node,Comparison.syn,
+                                                                                AdditiveExpression1_2.node])
+32: SingleCondition -> HistoryStatement Comparison AdditiveExpression1    SingleCondition.node=make_node('SingleCondition',
+                                                                             [HistoryStatement.node,Comparison.syn,
+                                                                             AdditiveExpression1.node])
+33: I_G -> FactorExpression2    FactorExpression2.inh=I_G.inh
+34: I_G -> #    I_G.syn=make_node('Factor',I_G.inh)
+35: I_H -> AdditiveExpression2
+36: I_H -> #
+37: AdditiveExpression1 -> FactorExpression1 I_H   AdditiveExpression1.node=I_H.syn
+                                                   I_H.inh=FactorExpression1.node
+38: AdditiveExpression1 -> Query I_G I_H    AdditiveExpression1.node=I_H.syn
+                                            I_G.inh=Query.node
+                                            I_H.inh=I_G.syn
+39: AdditiveExpression2 -> + FactorExpression1 I_H
+40: AdditiveExpression2 -> - FactorExpression1 I_H
+41: FactorExpression1 -> Factors I_G    FactorExpresion1.node=I_G.syn
+                                        I_G.inh=Factors.syn
+42: FactorExpression2 -> * Factors I_G    I_G.inh=make_node('*',[FactorExpression2.inh,Factors.syn])
+43: FactorExpression2 -> / Factors I_G    I_G.inh=make_node('/',[FactorExpression2.inh,Factors.syn])
+44: Factors -> Boolean    Factors.syn=Boolean.node
+45: Factors -> EventParameter    Factors.syn=EventParameter.node
+46: Factors -> IntegerLiteral    Factors.syn=IntegerLiteral.node
+47: Factors -> String    Factors.syn=String.node
+48: Factors -> ( AdditiveExpression1 )    Factors.syn=AdditiveExpression1.node
+49: IntegerLiteral -> <DIGITS> F_A    IntegerLiteral.node=F_A.syn
+                                      F_A.inh=<DIGITS>
+50: Boolean -> FALSE
+51: Boolean -> TRUE
+52: String -> <STRING>
+53: Query -> QUERY StoredProcedure
+54: StoredProcedure -> Instance ( Parameters )
+55: I_I -> #
+56: I_I -> , ParamInput I_I
+57: Parameters -> ParamInput I_I
+58: ParamInput -> ChannelList
+59: ParamInput -> EventParameter
+60: ParamInput -> IntegerLiteral
+61: I_J -> #
+62: I_J -> , Channel I_J
+63: ChannelList -> Channel
+64: ChannelList -> ( Channel I_J )
+65: HistoryStatement -> HISTORY HistInput
+66: HistInput -> ( <DIGITS> ) [ AdditiveExpression1 Comparison AdditiveExpression1 ]
+67: I_K -> LogicalAnd Procedure I_K
+68: I_K -> #
+69: ActionStatement -> THEN Procedure I_K
+70: I_L -> Parameters I_L
+71: I_L -> #
+72: Procedure -> Instance ( I_L )
+73: LogicalAnd -> AND
+74: LogicalOr -> OR
+75: Comparison -> !=
+76: Comparison -> <
+77: Comparison -> <=
+78: Comparison -> =
+79: Comparison -> >
+80: Comparison -> >=
+81: EventParameter -> <ID> . <ID>
+82: Event -> <ID>
+83: F_A -> #    F_A.syn=make_node(F_A.inh,[])
+84: F_A -> . <DIGITS>    F_A.syn=make_node(''.join([F_A.syn,'.','<DIGIT>'),[])

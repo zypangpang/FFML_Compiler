@@ -1,6 +1,6 @@
 import sys
 from utils import print_tree
-from grammar_related import get_grammar_from_file, left_factoring, get_production_map,get_all_terms
+from grammar_related import get_grammar_from_file, left_factoring, get_production_map,get_all_terms,get_all_productions
 from first_follow_set import FirstFollowSet
 from constants import EMPTY
 from lexer import Lexer,get_symbol_table,get_dfa_from_file
@@ -65,12 +65,18 @@ if __name__ == '__main__':
     M_path="texts/LL1_table.txt"
     start_symbol, grammar = get_grammar_from_file('BNF', path, '|', ';')
 
+    t=get_all_productions(grammar)
+    t.sort()
+    for p in t:
+        print(p)
+
     #grammar=left_factoring(grammar)
     #output_formatted_grammar(start_symbol,grammar,'->','|',';')
 
     #parse_table=get_parse_table(grammar)
     #output_parse_table(parse_table,"#")
 
+    '''
     parse_table=read_parse_table(M_path,'#')
 
     dfa_path = 'lexer/dfa.txt'
@@ -86,4 +92,5 @@ if __name__ == '__main__':
     print_tree(root,0)
 
     code_file.close()
+    '''
 

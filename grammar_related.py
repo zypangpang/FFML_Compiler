@@ -71,17 +71,20 @@ class Production:
 
     def __str__(self):
         right_str = " ".join([ele.content for ele in self.right_elements])
-        return f"{self.left}->{right_str}"
+        return f"{self.id}: {self.left} -> {right_str}"
 
     def __repr__(self):
         right_str = " ".join([ele.content for ele in self.right_elements])
-        return f"({self.id}:{self.left}->{right_str})"
+        return f"({self.id}:{self.left} -> {right_str})"
 
     def __lt__(self, other):
         if not isinstance(other, Production):
             # don't attempt to compare against unrelated types
             return NotImplemented
-        return self.right_elements < other.right_elements
+        if self.left == other.left:
+            return self.right_elements < other.right_elements
+        else:
+            return self.id < other.id
 
 
 '''

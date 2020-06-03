@@ -57,7 +57,7 @@ class Parser:
         print(f"Expect {expect}")
         print(f"But '{given}' is given")
 
-    def parse(self,lexer):
+    def nonrecursive_parse(self,lexer):
         '''
         Parse input. Raise exception if there is syntax error
         :param lexer:
@@ -111,6 +111,9 @@ class Parser:
                     stack.extend(reversed(prod.right_elements))
             X=stack[-1]
         return root.children[0]
+
+    def recursive_parse(self,lexer):
+        pass
 
 
 

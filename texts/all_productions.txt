@@ -68,38 +68,48 @@
 48: Factors -> ( AdditiveExpression1 )    Factors.syn=AdditiveExpression1.node
 49: IntegerLiteral -> <DIGITS> F_A    IntegerLiteral.node=F_A.syn
                                       F_A.inh=<DIGITS>
-50: Boolean -> FALSE
-51: Boolean -> TRUE
-52: String -> <STRING>
-53: Query -> QUERY StoredProcedure
-54: StoredProcedure -> Instance ( Parameters )
-55: I_I -> #
-56: I_I -> , ParamInput I_I
-57: Parameters -> ParamInput I_I
-58: ParamInput -> ChannelList
-59: ParamInput -> EventParameter
-60: ParamInput -> IntegerLiteral
-61: I_J -> #
-62: I_J -> , Channel I_J
-63: ChannelList -> Channel
-64: ChannelList -> ( Channel I_J )
-65: HistoryStatement -> HISTORY HistInput
-66: HistInput -> ( <DIGITS> ) [ AdditiveExpression1 Comparison AdditiveExpression1 ]
-67: I_K -> LogicalAnd Procedure I_K
-68: I_K -> #
-69: ActionStatement -> THEN Procedure I_K
-70: I_L -> Parameters I_L
-71: I_L -> #
-72: Procedure -> Instance ( I_L )
-73: LogicalAnd -> AND
-74: LogicalOr -> OR
-75: Comparison -> !=
+50: Boolean -> FALSE    Boolean.node=make_node('Boolean','False',[])
+51: Boolean -> TRUE     Boolean.node=make_node('Boolean',[])
+52: String -> <STRING>  String.node=make_node('String',[])
+53: Query -> QUERY StoredProcedure    Query.node=StoredProcedure.syn
+54: StoredProcedure -> Instance ( Parameters )    StoredProcedure.syn=make_node('Query',[Instance.node,Parameters.node])
+55: I_I -> #     I_I.syn=make_node('Params',I_I.inh)
+56: I_I -> , ParamInput I_I    I_I.syn=I_I'.syn
+                               I_I'.inh=[I_I.inh,ParamInput.syn]
+57: Parameters -> ParamInput I_I    Parameters.node=I_I.syn
+                                    I_I.inh=ParamInput.syn
+58: ParamInput -> ChannelList    ParamInput.syn=ChannelList.node
+59: ParamInput -> EventParameter    ParamInput.syn=EventParameter.node
+60: ParamInput -> IntegerLiteral    ParamInput.syn=IntegerLiteral.node
+61: I_J -> #    I_J.syn=make_node('ChannelList',i_J.inh)
+62: I_J -> , Channel I_J    I_J.syn=I_J'.syn
+                            I_J'.inh=[I_J.inh, Channel.node]
+63: ChannelList -> Channel     ChannelList.node=Channel.node
+64: ChannelList -> ( Channel I_J )    ChannelList.node=I_J.syn
+                                      I_J.inh=Channel.node
+65: HistoryStatement -> HISTORY HistInput    HistoryStatement.node=HistInput.syn
+66: HistInput -> ( <DIGITS> ) [ AdditiveExpression1 Comparison AdditiveExpression1 ]    time=make_node('time',<DIGIT>,[])
+                                                                                        condition=make_node('HistCond',
+                                                                                            [AdditiveExpression1_1.node,
+                                                                                            Comparison.node,AdditiveExpression1_2.node])
+                                                                                        HistInput.syn=make_node('HistStatement',[time,condition])
+67: I_K -> LogicalAnd Procedure I_K    I_K.syn=I_K'.syn
+                                       I_K'.inh=[I_K.inh,Procedure.node]
+68: I_K -> #    I_K.syn=make_node('Actions',I_K.inh)
+69: ActionStatement -> THEN Procedure I_K    ActionStatment.node=I_K.syn
+                                             I_K.inh=Procedure.node
+70: I_L -> Parameters        I_L.syn=Parameters.node
+71: I_L -> #    I_L.syn=None
+72: Procedure -> Instance ( I_L )    Procedure.node=make_node('Procedure',[Instance.node,I_L.syn])
+73: LogicalAnd -> AND    LogicalAnd.node=make_node("And",[])
+74: LogicalOr -> OR    LogicalOr.node=make_node("Or",[])
+75: Comparison -> !=    Comparison.node=make_node('Comp','!=',[])
 76: Comparison -> <
 77: Comparison -> <=
 78: Comparison -> =
 79: Comparison -> >
 80: Comparison -> >=
-81: EventParameter -> <ID> . <ID>
-82: Event -> <ID>
+81: EventParameter -> <ID> . <ID>     EventParameter.node=make_node("EventParam",'<ID>.<ID>',[])
+82: Event -> <ID>    Event.node=make_node("Event",<ID>,[])
 83: F_A -> #    F_A.syn=make_node(F_A.inh,[])
-84: F_A -> . <DIGITS>    F_A.syn=make_node(''.join([F_A.syn,'.','<DIGIT>'),[])
+84: F_A -> . <DIGITS>    F_A.syn=make_node(''.join([F_A.inh,'.','<DIGIT>'),[])

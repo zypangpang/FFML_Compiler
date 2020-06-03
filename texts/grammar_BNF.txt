@@ -149,7 +149,7 @@ ActionStatement ->
       "THEN" Procedure I_K
     ;
 I_L ->
-      Parameters I_L
+      Parameters
     | #
     ;
 Procedure ->

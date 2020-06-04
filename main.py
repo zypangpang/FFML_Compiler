@@ -85,8 +85,8 @@ if __name__ == '__main__':
     code_file = open(new_code_path, 'r')
 
     lexer = Lexer(code_file, get_dfa_from_file(dfa_path), get_symbol_table())
-    parser=Parser(grammar,parse_table,start_symbol)
-    root=parser.nonrecursive_parse(lexer)
+    parser=Parser(grammar,parse_table,start_symbol,lexer)
+    root=parser.parse_AST()
     #root={"name":'test',"children":[{"name":"c1","children":[{"name":"cc1","children":[]}]},{"name":"c2","children":[]}]}
     print_tree(root,0)
 

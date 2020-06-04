@@ -97,9 +97,9 @@ def prod_to_str(left, right):
 
 def print_tree(root,depth,last=False):
     if last:
-        print("┆ "*depth+"┖┄"+root.name)
+        print("┆ "*depth+"┖┄"+root.type)
     else:
-        print("┆ " * depth  + "┠┄" + root.name)
+        print("┆ " * depth  + "┠┄" + root.type)
     for c in root.children[:-1]:
         print_tree(c,depth+1)
     if root.children:

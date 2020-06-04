@@ -113,9 +113,14 @@ class Lexer:
         self.symbol_table=symbol_table
 
         self.eof=False
+        self.__cur_token=None
+        #self.__retract_token=False
 
         self.__loaded=False # This bool var is used for forward pointer retraction to avoid loading buffer wrongly
         self.__load_buffer()
+
+    def retract_token(self):
+        self.__retract_token=True
 
     def __load_buffer(self):
         '''
@@ -194,13 +199,29 @@ class Lexer:
 
     def get_cur_line_num(self):
         return self.__cur_line_num
+
     def get_next_token(self):
         '''
-        Main function: get next token from code file
-        :return: Next token
+        Return current token and clear cur_token.
+        :return:
+        '''
+        if self.__cur_token:
+            res = self.__cur_token
+            self.__cur_token=None
+        else:
+            self.lookahead()
+            res=self.get_next_token()
+        return res
+
+    def lookahead(self):
+        '''
+        Get current token. If no, then get next token from code file and put it as the current token
+        :return: current token
         '''
         if self.eof:
             return Token(ENDMARK,{'str':ENDMARK})
+        if self.__cur_token:
+            return self.__cur_token
 
         s=self.dfa.get_start_state()
         ps=s
@@ -223,8 +244,10 @@ class Lexer:
             self.__lexeme_buffer = self.__forward_buffer
             if token_name == "<BLANK>":
                 self.__cur_line_num+=lexeme.count('\n')
-                return self.get_next_token()
-            return token
+                token=self.get_next_token()
+
+            self.__cur_token=token
+            return self.__cur_token
         else:
             #print(self.__next_char())
             print(f"Unrecognized string: '{cur_str}'")

@@ -59,13 +59,14 @@ class Parser:
         print(f"Expect {expect}")
         print(f"But '{given}' is given")
 
-    def parse_tree(self,lexer):
+    def parse_tree(self):
         '''
         Parse input. Raise exception if there is syntax error
         :param lexer:
         :return:
         '''
         # init parsing stack
+        lexer=self.lexer
         root=ASTNode("","",[])
         stack=deque()
         stack.append(Element(ENDMARK))
@@ -114,8 +115,9 @@ class Parser:
             X=stack[-1]
         return root.children[0]
 
-    def parse_AST(self,lexer):
-        pass
+    def parse_AST(self):
+        next_token=self.lexer.get_next_token()
+        return self.__PolicyList(next_token)
 
     def __raise_syntax_error(self,token,nt_name):
         self.__print_error_str(self.lexer, tuple(self.__M[nt_name].keys()),
@@ -178,7 +180,7 @@ class Parser:
             raise Exception("zyp: Unexpected Error")
 
     def __PolicyStatement(self,next_token):
-        nt_name = 'PolicyStatment'
+        nt_name = 'PolicyStatement'
         prod_id = self.__get_prod_id(nt_name, next_token)
 
         if prod_id == 5:
@@ -291,7 +293,16 @@ class Parser:
             raise Exception("zyp: Unexpected Error")
 
     def __ActionStatement(self,next_token):
-        pass
+        nt_name = 'ActionStatement'
+        prod_id = self.__get_prod_id(nt_name, next_token)
+
+        if prod_id == 69:
+            next_token=self.__match(next_token,"THEN")
+            node = self.__Procedure(next_token)
+            next_token=self.lexer.get_next_token()
+            return self.__I_K(next_token,[node])
+        else:
+            raise Exception("zyp: Unexpected Error")
 
     def __String(self,next_token):
         nt_name = 'String'
@@ -303,13 +314,22 @@ class Parser:
             raise Exception("zyp: Unexpected Error")
 
     def __LogicalOr(self,next_token):
-        pass
+        nt_name = 'LogicalOr'
+        prod_id = self.__get_prod_id(nt_name, next_token)
+
+        if prod_id == 74:
+            return ASTNode("Or","Or",[])
+        else:
+            raise Exception("zyp: Unexpected Error")
+
     def __LogicalAnd(self,next_token):
         nt_name = 'LogicalAnd'
         prod_id = self.__get_prod_id(nt_name, next_token)
+        if prod_id == 73:
+            return ASTNode("And","And",[])
+        else:
+            raise Exception("zyp: Unexpected Error")
 
-        if prod_id == 20:
-            pass
     def __SingleEvent(self,next_token):
         nt_name = 'SingleEvent'
         prod_id = self.__get_prod_id(nt_name, next_token)
@@ -345,7 +365,14 @@ class Parser:
             raise Exception("zyp: Unexpected Error")
 
     def __Event(self,next_token):
-        pass
+        nt_name = 'Event'
+        prod_id = self.__get_prod_id(nt_name, next_token)
+
+        if prod_id == 82:
+            self.__match(next_token,"<ID>",False)
+            return ASTNode("Event",next_token.attr['entry'],[])
+        else:
+            raise Exception("zyp: Unexpected Error")
 
 
     def __Sequence(self,next_token):
@@ -373,8 +400,8 @@ class Parser:
 
         if prod_id == 25:
             self.__match(next_token,'<ID>',False)
-            id_val=next_token.attr['entry']['str']
-            return ASTNode('<ID>',id_val,[])
+            id_entry=next_token.attr['entry']
+            return ASTNode('<ID>',id_entry,[])
         else:
             raise Exception("zyp: Unexpected Error")
 
@@ -476,17 +503,43 @@ class Parser:
             raise Exception("zyp: Unexpected Error")
 
     def __Comparison(self,next_token):
-        nt_name = 'I_D'
+        nt_name = 'Comparison'
         prod_id = self.__get_prod_id(nt_name, next_token)
+        a=self.__get_token_info(next_token)
+        return ASTNode("Comp",a,[])
 
-        if prod_id == 20:
-            pass
     def __HistoryStatement(self,next_token):
-        nt_name = 'I_D'
+        nt_name = 'HistoryStatement'
         prod_id = self.__get_prod_id(nt_name, next_token)
 
-        if prod_id == 20:
-            pass
+        if prod_id == 65:
+            next_token= self.__match(next_token,"HISTORY")
+            return self.__HistInput(next_token)
+        else:
+            raise Exception("zyp: Unexpected Error")
+
+    def __HistInput(self,next_token):
+        nt_name = 'HistInput'
+        prod_id = self.__get_prod_id(nt_name, next_token)
+
+        if prod_id == 66:
+            next_token=self.__match(next_token,'(')
+            self.__match(next_token,"<DIGITS>",False)
+            time=int(next_token.attr['str'])
+            next_token=self.lexer.get_next_token()
+            next_token=self.__match(next_token,')')
+            next_token=self.__match(next_token,'[')
+            node1=self.__AdditiveExpression1(next_token)
+            next_token=self.lexer.get_next_token()
+            comp=self.__Comparison(next_token)
+            next_token=self.lexer.get_next_token()
+            node2=self.__AdditiveExpression1(next_token)
+            self.__match(next_token,']',False)
+            time_node=ASTNode("Time",time,[])
+            condition_node=ASTNode("Condition",'',[node1,comp,node2])
+            return ASTNode("HistStatement",[time_node,condition_node])
+        else:
+            raise Exception("zyp: Unexpected Error")
 
     def __FactorExpression1(self,next_token):
         nt_name = 'FactorExpression1'
@@ -515,11 +568,16 @@ class Parser:
             raise Exception("zyp: Unexpected Error")
 
     def __Query(self,next_token):
-        nt_name = 'I_D'
+        nt_name = 'Query'
         prod_id = self.__get_prod_id(nt_name, next_token)
 
-        if prod_id == 20:
-            pass
+        if prod_id == 53:
+            next_token=self.__match(next_token,'QUEYR')
+            syn=self.__StoredProcedure(next_token)
+            return syn
+        else:
+            raise Exception("zyp: Unexpected Error")
+
     def __Factors(self,next_token):
         nt_name = 'Factors'
         prod_id = self.__get_prod_id(nt_name, next_token)
@@ -551,14 +609,149 @@ class Parser:
             raise Exception("zyp: Unexpected Error")
 
     def __EventParameter(self,next_token):
-        nt_name = 'I_D'
+        nt_name = 'EventParameter'
         prod_id = self.__get_prod_id(nt_name, next_token)
 
-        if prod_id == 20:
-            pass
+        if prod_id == 81:
+            self.__match(next_token,"<ID>",False)
+            id1=next_token.attr['entry']
+            next_token=self.lexer.get_next_token()
+            next_token=self.__match(next_token,'.')
+            self.__match(next_token,"<ID>",False)
+            id2=next_token.attr['entry']
+            return ASTNode("EventParam",[id1,id2],[])
+        else:
+            raise Exception("zyp: Unexpected Error")
+
     def __F_A(self,next_token,inh):
-        nt_name = 'I_D'
+        nt_name = 'F_A'
         prod_id = self.__get_prod_id(nt_name, next_token)
 
-        if prod_id == 20:
-            pass
+        if prod_id == 83:
+            return ASTNode("Digits",float(inh),[])
+        elif prod_id == 84:
+            next_token=self.__match(next_token,".")
+            self.__match(next_token,"<DIGITS>",False)
+            number2=next_token.attr['str']
+            number=float(inh+'.'+number2)
+            return ASTNode("Digits",number,[])
+        else:
+            raise Exception("zyp: Unexpected Error")
+
+    def __StoredProcedure(self,next_token):
+        nt_name = 'StoredProcedure'
+        prod_id = self.__get_prod_id(nt_name, next_token)
+
+        if prod_id == 54:
+            name=self.__Instance(next_token)
+            next_token=self.lexer.get_next_token()
+            next_token=self.__match(next_token,'(')
+            param=self.__Parameters(next_token)
+            next_token=self.lexer.get_next_token()
+            self.__match(next_token,')',False)
+            return ASTNode("Query","",[name,param])
+    def __Parameters(self,next_token):
+        nt_name = 'Parameters'
+        prod_id = self.__get_prod_id(nt_name, next_token)
+
+        if prod_id == 57:
+            syn=self.__ParamInput(next_token)
+            next_token=self.lexer.get_next_token()
+            return self.__I_I(next_token,[syn])
+        else:
+            raise Exception("zyp: Unexpected Error")
+
+    def __I_I(self,next_token,inh):
+        nt_name = 'I_I'
+        prod_id = self.__get_prod_id(nt_name, next_token)
+
+        if prod_id == 55:
+            return ASTNode("Params","",inh)
+        elif prod_id==56:
+            next_token=self.__match(next_token,',')
+            syn=self.__ParamInput(next_token)
+            next_token=self.lexer.get_next_token()
+            return self.__I_I(next_token,inh+[syn])
+        else:
+            raise Exception("zyp: Unexpected Error")
+
+    def __ParamInput(self,next_token):
+        nt_name = 'ParamInput'
+        prod_id = self.__get_prod_id(nt_name, next_token)
+
+        if prod_id == 58:
+            return self.__ChannelList(next_token)
+        elif prod_id == 59:
+            return self.__EventParameter(next_token)
+        elif prod_id == 60:
+            return self.__IntegerLiteral(next_token)
+        else:
+            raise Exception("zyp: Unexpected Error")
+
+    def __I_J(self,next_token,inh):
+        nt_name = 'I_J'
+        prod_id = self.__get_prod_id(nt_name, next_token)
+
+        if prod_id == 61:
+            return ASTNode("ChannelList","",inh)
+        elif prod_id == 62:
+            next_token=self.__match(next_token,',')
+            node=self.__Channel(next_token)
+            next_token=self.lexer.get_next_token()
+            return self.__I_J(next_token,inh+[node])
+        else:
+            raise Exception("zyp: Unexpected Error")
+
+    def __ChannelList(self,next_token):
+        nt_name = 'ChannelList'
+        prod_id = self.__get_prod_id(nt_name, next_token)
+
+        if prod_id == 63:
+            return self.__Channel(next_token)
+        elif prod_id == 64:
+            next_token=self.__match(next_token,'(')
+            node=self.__Channel(next_token)
+            next_token=self.lexer.get_next_token()
+            return self.__I_J(next_token,[node])
+        else:
+            raise Exception("zyp: Unexpected Error")
+    def __I_K(self,next_token,inh):
+        nt_name = 'I_K'
+        prod_id = self.__get_prod_id(nt_name, next_token)
+
+        if prod_id == 67:
+            self.__LogicalAnd(next_token)
+            next_token=self.lexer.get_next_token()
+            node=self.__Procedure(next_token)
+            next_token=self.lexer.get_next_token()
+            return self.__I_K(next_token,inh+[node])
+        elif prod_id == 68:
+            return ASTNode("Actions",inh)
+        else:
+            raise Exception("zyp: Unexpected Error")
+
+    def __Procedure(self,next_token):
+        nt_name = 'Procedure'
+        prod_id = self.__get_prod_id(nt_name, next_token)
+
+        if prod_id == 72:
+            name=self.__Instance(next_token)
+            next_token=self.lexer.get_next_token()
+            next_token=self.__match(next_token,'(')
+            node=self.__I_L(next_token)
+            next_token=self.lexer.get_next_token()
+            self.__match(next_token,")",False)
+            return ASTNode("Procedure","",[name,node])
+        else:
+            raise Exception("zyp: Unexpected Error")
+
+    def __I_L(self,next_token):
+        nt_name = 'I_L'
+        prod_id = self.__get_prod_id(nt_name, next_token)
+
+        if prod_id == 70:
+            return self.__Parameters(next_token)
+        elif prod_id == 71:
+            return None
+        else:
+            raise Exception("zyp: Unexpected Error")

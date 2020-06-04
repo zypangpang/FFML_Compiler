@@ -116,7 +116,6 @@ class Parser:
         return root.children[0]
 
     def parse_AST(self):
-        #next_token=self.lexer.get_next_token()
         return self.__PolicyList()
 
     def __raise_syntax_error(self,token,nt_name):
@@ -130,7 +129,6 @@ class Parser:
         token=self.lexer.get_next_token()
         a=self.__get_token_info(token)
         if terminal == a:  # need expansion
-            #if shift:
             return token
         else:
             self.__print_error_str(self.lexer, terminal, a)
@@ -152,7 +150,6 @@ class Parser:
         prod_id=self.__get_prod_id(nt_name,next_token)
         if prod_id==0: # 0: PolicyList -> PolicyStatement I_A
             node=self.__PolicyStatement()
-            #next_token=self.lexer.get_next_token()
             return self.__I_A([node])
         else:
             raise Exception("zyp: Unexpected Error")
@@ -164,7 +161,6 @@ class Parser:
 
         if prod_id==1:
             node=self.__PolicyStatement()
-            #next_token=self.lexer.get_next_token()
             return self.__I_A(inh+[node])
         elif prod_id == 2:
             return ASTNode('PolicyList',"",inh)
@@ -190,11 +186,8 @@ class Parser:
 
         if prod_id == 5:
             PolicyId_node=self.__PolicyId()
-            #next_token = self.lexer.get_next_token()
             EventStatement_node = self.__EventStatement()
-            #next_token = self.lexer.get_next_token()
             I_B_node=self.__I_B()
-            #next_token = self.lexer.get_next_token()
             ActionStatement_node=self.__ActionStatement()
             self.__match(';')
             if I_B_node:
@@ -485,7 +478,7 @@ class Parser:
         if prod_id == 35:
             return self.__AdditiveExpression2(inh)
         elif prod_id ==36:
-            return ASTNode("Additive","",inh)
+            return ASTNode("Expression","",inh)
         else:
             raise Exception("zyp: Unexpected Error")
 
@@ -510,9 +503,11 @@ class Parser:
         prod_id = self.__get_prod_id(nt_name, next_token)
 
         if prod_id == 39:
+            self.__match('+')
             node=self.__FactorExpression1()
             return self.__I_H(inh+[ASTNode("AddOp","+",[]),node])
         elif prod_id ==40:
+            self.__match('-')
             node = self.__FactorExpression1()
             return self.__I_H(inh+[ASTNode("AddOp", "-", []), node])
         else:
@@ -553,7 +548,7 @@ class Parser:
             self.__match(']')
             time_node=ASTNode("Time",time,[])
             condition_node=ASTNode("Condition",'',[node1,comp,node2])
-            return ASTNode("HistStatement",[time_node,condition_node])
+            return ASTNode("HistStatement","",[time_node,condition_node])
         else:
             raise Exception("zyp: Unexpected Error")
 
@@ -574,9 +569,11 @@ class Parser:
         prod_id = self.__get_prod_id(nt_name, next_token)
 
         if prod_id == 42:
+            self.__match('*')
             node=self.__Factors()
             return self.__I_G(inh+[ASTNode("MultiOp","*",[]),node])
         elif prod_id==43:
+            self.__match('/')
             node = self.__Factors()
             return self.__I_G(inh + [ASTNode("MultiOp", "/", []), node])
         else:
@@ -732,7 +729,9 @@ class Parser:
         elif prod_id == 64:
             self.__match('(')
             node=self.__Channel()
-            return self.__I_J([node])
+            syn=self.__I_J([node])
+            self.__match(')')
+            return syn
         else:
             raise Exception("zyp: Unexpected Error")
 

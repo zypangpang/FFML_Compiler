@@ -202,26 +202,30 @@ class Lexer:
 
     def get_next_token(self):
         '''
-        Return current token and clear cur_token.
+        Take away current token
         :return:
         '''
-        if self.__cur_token:
-            res = self.__cur_token
-            self.__cur_token=None
-        else:
-            self.lookahead()
-            res=self.get_next_token()
+        if self.__cur_token is None:
+            self.__fetch_next_token()
+        res = self.__cur_token
+        self.__cur_token=None
         return res
 
     def lookahead(self):
+        if self.__cur_token is None:
+            self.__fetch_next_token()
+        return self.__cur_token
+
+    def __fetch_next_token(self):
         '''
         Get current token. If no, then get next token from code file and put it as the current token
         :return: current token
         '''
-        if self.eof:
-            return Token(ENDMARK,{'str':ENDMARK})
         if self.__cur_token:
-            return self.__cur_token
+            raise Exception("Fetch when cur_token is not None")
+        if self.eof:
+            self.__cur_token= Token(ENDMARK,{'str':ENDMARK})
+            return
 
         s=self.dfa.get_start_state()
         ps=s
@@ -247,7 +251,6 @@ class Lexer:
                 token=self.get_next_token()
 
             self.__cur_token=token
-            return self.__cur_token
         else:
             #print(self.__next_char())
             print(f"Unrecognized string: '{cur_str}'")

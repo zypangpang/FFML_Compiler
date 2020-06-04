@@ -47,20 +47,26 @@
                                                                              [HistoryStatement.node,Comparison.syn,
                                                                              AdditiveExpression1.node])
 33: I_G -> FactorExpression2    FactorExpression2.inh=I_G.inh
+                                I_G.syn=FactorExpression2.syn
 34: I_G -> #    I_G.syn=make_node('Factor',I_G.inh)
-35: I_H -> AdditiveExpression2
-36: I_H -> #
+35: I_H -> AdditiveExpression2    AdditiveExpression2.inh=I_H.inh
+                                  I_H.syn=AdditiveExpression2.syn
+36: I_H -> #    I_H.syn=make_node('Addition',I_H.inh)
 37: AdditiveExpression1 -> FactorExpression1 I_H   AdditiveExpression1.node=I_H.syn
                                                    I_H.inh=FactorExpression1.node
 38: AdditiveExpression1 -> Query I_G I_H    AdditiveExpression1.node=I_H.syn
                                             I_G.inh=Query.node
                                             I_H.inh=I_G.syn
-39: AdditiveExpression2 -> + FactorExpression1 I_H
-40: AdditiveExpression2 -> - FactorExpression1 I_H
+39: AdditiveExpression2 -> + FactorExpression1 I_H    I_H.inh=[AdditiveExpresion2.inh,'+',FactorExpression1.node]
+                                                      AdditiveExpression2.syn=I_H.syn
+40: AdditiveExpression2 -> - FactorExpression1 I_H    I_H.inh=[AdditiveExpresion2.inh,'-',FactorExpression1.node]
+                                                      AdditiveExpression2.syn=I_H.syn
 41: FactorExpression1 -> Factors I_G    FactorExpresion1.node=I_G.syn
                                         I_G.inh=Factors.syn
-42: FactorExpression2 -> * Factors I_G    I_G.inh=make_node('*',[FactorExpression2.inh,Factors.syn])
-43: FactorExpression2 -> / Factors I_G    I_G.inh=make_node('/',[FactorExpression2.inh,Factors.syn])
+42: FactorExpression2 -> * Factors I_G    I_G.inh=[FactorExpression2.inh,'*',Factors.syn]
+                                          FactorExpression2.syn=I_G.syn
+43: FactorExpression2 -> / Factors I_G    I_G.inh=[FactorExpression2.inh,'/',Factors.syn]
+                                          FactorExpression2.syn=I_G.syn
 44: Factors -> Boolean    Factors.syn=Boolean.node
 45: Factors -> EventParameter    Factors.syn=EventParameter.node
 46: Factors -> IntegerLiteral    Factors.syn=IntegerLiteral.node

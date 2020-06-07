@@ -609,7 +609,10 @@ class Parser:
         elif prod_id == 47:
             return self.__String()
         elif prod_id == 48:
-            return self.__AdditiveExpression1()
+            self.__match('(')
+            node=self.__AdditiveExpression1()
+            self.__match(')')
+            return node
         else:
             self.__raise_inner_error()
 

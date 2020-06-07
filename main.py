@@ -86,6 +86,9 @@ if __name__ == '__main__':
 
     lexer = Lexer(code_file, get_dfa_from_file(dfa_path), get_symbol_table())
     parser=Parser(grammar,parse_table,start_symbol,lexer)
+    root = parser.parse_AST()
+
+    '''
     try:
         root=parser.parse_AST()
     except SyntaxError as e:
@@ -96,6 +99,8 @@ if __name__ == '__main__':
         print(e.desc)
     else:
         print_tree(root,0)
+    '''
+    print_tree(root, 0)
     code_file.close()
     print("Done.")
 

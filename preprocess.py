@@ -3,7 +3,7 @@ from constants import COMMENT_SYM
 class Preprocessor:
     def __init__(self,file_path):
         self.file_path=file_path
-        self.new_file_path=self.file_path+'.pre'
+        self.new_file_path=f".{self.file_path}.tmp"
 
     def remove_blank(self,line):
         return line.strip()

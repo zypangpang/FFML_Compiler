@@ -1,5 +1,5 @@
 import sys
-from utils import print_tree
+from utils import print_tree,SyntaxError,LexicalError
 from grammar_related import get_grammar_from_file, left_factoring, get_production_map,get_all_terms,get_all_productions
 from first_follow_set import FirstFollowSet
 from constants import EMPTY
@@ -86,9 +86,16 @@ if __name__ == '__main__':
 
     lexer = Lexer(code_file, get_dfa_from_file(dfa_path), get_symbol_table())
     parser=Parser(grammar,parse_table,start_symbol,lexer)
-    root=parser.parse_AST()
-    #root={"name":'test',"children":[{"name":"c1","children":[{"name":"cc1","children":[]}]},{"name":"c2","children":[]}]}
-    print_tree(root,0)
-
+    try:
+        root=parser.parse_AST()
+    except SyntaxError as e:
+        print("Syntax Error")
+        print(e.desc)
+    except LexicalError as e:
+        print("Lexical Error")
+        print(e.desc)
+    else:
+        print_tree(root,0)
     code_file.close()
+    print("Done.")
 

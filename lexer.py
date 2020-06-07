@@ -2,6 +2,7 @@ import string
 from collections import defaultdict
 #from global_var import global_symbol_table
 from constants import  ENDMARK,BUFFER_SIZE,KEYWORDS
+from utils import LexicalError
 def get_symbol_table():
     '''
     Get original symbol table.
@@ -141,7 +142,7 @@ class Lexer:
         :return:
         '''
         if self.eof:
-            raise Exception("No more characters")
+            raise LexicalError("EOF","No more characters")
         buffer=self.__buffer[self.__forward_buffer]
         ans=buffer[self.__forward]
         next=self.__forward+1
@@ -197,6 +198,16 @@ class Lexer:
         return ''.join(self.__buffer[self.__lexeme_buffer][left:self.__lexeme_begin-1]),\
                ''.join(self.__buffer[self.__lexeme_buffer][self.__lexeme_begin-1:right]) #.replace('\n','\\n')\
 
+
+    def __get_error_str(self,cur_str):
+        begin = f"Lexical error at line {self.get_cur_line_num()}"
+        dash_num = 10
+        first_line = f"{'-' * dash_num}{begin}{'-' * dash_num}"
+        ans = f"{first_line}\n" \
+              f"Unrecognized string '{cur_str}'\n" \
+              f"{'-' * len(first_line)}"
+        return ans
+
     def get_cur_line_num(self):
         return self.__cur_line_num
 
@@ -222,7 +233,7 @@ class Lexer:
         :return: current token
         '''
         if self.__cur_token:
-            raise Exception("Fetch when cur_token is not None")
+            raise LexicalError("InnerError","Unexpected fetch char when cur_token is not None.")
         if self.eof:
             self.__cur_token= Token(ENDMARK,{'str':ENDMARK})
             return
@@ -253,8 +264,7 @@ class Lexer:
             self.__cur_token=token
         else:
             #print(self.__next_char())
-            print(f"Unrecognized string: '{cur_str}'")
-            raise Exception("Lexical Error: "+cur_str)
+            raise LexicalError("LexicalError",self.__get_error_str(cur_str))
 
 def get_dfa_from_file(path):
     '''

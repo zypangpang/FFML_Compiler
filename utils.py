@@ -1,5 +1,17 @@
 from constants import TERM_BEGIN_CHARS, ELE_TYPE
 
+class SyntaxError(Exception):
+    def __init__(self,type,desc):
+        self.type=type
+        self.desc=desc
+    def __str__(self):
+        return f"Syntax error:\ntype: {self.type}\n{self.desc}"
+class LexicalError(Exception):
+    def __init__(self,type,desc):
+        self.type=type
+        self.desc=desc
+    def __str__(self):
+        return f"Lexical error:\ntype: {self.type}\n{self.desc}"
 
 def nonterm_name_generator(begin_chars):
     now = 'A'

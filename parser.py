@@ -1,6 +1,7 @@
 from collections import deque
 from constants import  ENDMARK,ELE_TYPE,EMPTY
 from grammar_related import get_production_map,Element
+from utils import  SyntaxError
 #from lexer import Lexer
 class ASTNode:
     def __init__(self,type,value,children,parent=None):
@@ -50,14 +51,17 @@ class Parser:
         return X == token.attr['str']
     '''
 
-    def __print_error_str(self,lexer,expect,given):
-        print(f"Syntax error at line {lexer.get_cur_line_num()}")
-        print("<<<<<<<<<<<")
+    def __get_error_str(self, lexer, expect, given):
         left,right=lexer.get_error_context()
-        print(left,"^^",right)
-        print(">>>>>>>>>>>")
-        print(f"Expect {expect}")
-        print(f"But '{given}' is given")
+        begin=f"Syntax error at line {lexer.get_cur_line_num()}"
+        dash_num=10
+        first_line=f"{'-'*dash_num}{begin}{'-'*dash_num}"
+        ans=f"{first_line}\n"\
+            f"{left}??{right}\n\n"\
+            f">>> Expect {expect}\n"\
+            f"<<< But '{given}' is given\n"\
+            f"{'-'*len(first_line)}"
+        return ans
 
     def parse_tree(self):
         '''
@@ -91,14 +95,13 @@ class Parser:
                     stack.pop()
                     token=lexer.get_next_token()
                 else:
-                    self.__print_error_str(lexer,X.content,a)
+                    raise SyntaxError("TermNotMatch", self.__get_error_str(lexer, X.content, a))
                     #print(X,token)
-                    raise Exception("Syntax error")
             elif a not in self.__M[X.content]:
-                self.__print_error_str(lexer,tuple(self.__M[X.content].keys()),
-                                       token.attr['entry']['str'] if token.name=='<ID>' else token.attr['str'])
+                error=self.__get_error_str(lexer, tuple(self.__M[X.content].keys()),
+                                     token.attr['entry']['str'] if token.name=='<ID>' else token.attr['str'])
                 #print(X,token)
-                raise Exception("Syntax error")
+                raise SyntaxError("NoMatchProdution",error)
             else:
                 prod=self.__p_map[self.__M[X.content][a]]
 
@@ -118,11 +121,12 @@ class Parser:
     def parse_AST(self):
         return self.__PolicyList()
 
-    def __raise_syntax_error(self,token,nt_name):
-        self.__print_error_str(self.lexer, tuple(self.__M[nt_name].keys()),
-                               token.attr['entry']['str'] if token.name == '<ID>' else token.attr['str'])
+    def __raise_inner_error(self):
+        raise SyntaxError("InnerError","Unexpected production ID")
+        #self.__get_error_str(self.lexer, tuple(self.__M[nt_name].keys()),
+                             #token.attr['entry']['str'] if token.name == '<ID>' else token.attr['str'])
         # print(X,token)
-        raise Exception("Syntax error")
+        #raise Exception("Syntax error")
 
 
     def __match(self,terminal):
@@ -131,16 +135,16 @@ class Parser:
         if terminal == a:  # need expansion
             return token
         else:
-            self.__print_error_str(self.lexer, terminal, a)
-            # print(X,token)
-            raise Exception("Syntax error")
+            raise SyntaxError("TermNotMatch", self.__get_error_str(self.lexer, terminal, a))
 
 
     def __get_prod_id(self,nt_name,next_token):
         a = self.__get_token_info(next_token)
         if a not in self.__M[nt_name]:
-            self.__raise_syntax_error(next_token, nt_name)
-            return
+            error=self.__get_error_str(self.lexer, tuple(self.__M[nt_name].keys()),
+                                 next_token.attr['entry']['str'] if next_token.name == '<ID>' else next_token.attr['str'])
+            # print(X,token)
+            raise SyntaxError("NoMatchProdution",error)
         prod_id = self.__M[nt_name][a]
         return prod_id
 
@@ -152,7 +156,7 @@ class Parser:
             node=self.__PolicyStatement()
             return self.__I_A([node])
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __I_A(self,inh):
         next_token=self.lexer.lookahead()
@@ -165,7 +169,7 @@ class Parser:
         elif prod_id == 2:
             return ASTNode('PolicyList',"",inh)
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __I_B(self):
         next_token=self.lexer.lookahead()
@@ -177,7 +181,7 @@ class Parser:
         elif prod_id == 4:
             return None
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __PolicyStatement(self):
         next_token=self.lexer.lookahead()
@@ -196,7 +200,7 @@ class Parser:
                 children=[PolicyId_node,EventStatement_node,ActionStatement_node]
             return ASTNode('PolicyStatement', "", children)
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __PolicyId(self):
         next_token=self.lexer.lookahead()
@@ -210,7 +214,7 @@ class Parser:
             self.__match(']')
             return node
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __I_C(self,inh):
         next_token=self.lexer.lookahead()
@@ -224,7 +228,7 @@ class Parser:
         elif prod_id == 8:
             return ASTNode("EventStatement","",inh)
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __I_D(self):
         next_token=self.lexer.lookahead()
@@ -239,7 +243,7 @@ class Parser:
             self.__match(')')
             return node
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __I_E(self,inh):
         next_token=self.lexer.lookahead()
@@ -253,7 +257,7 @@ class Parser:
             node=self.__Event()
             return self.__I_E(inh+[node])
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
 
     def __IntegerLiteral(self):
@@ -266,7 +270,7 @@ class Parser:
             number=next_token.attr['str']
             return  self.__F_A(number)
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __ConditionStatement(self):
         next_token=self.lexer.lookahead()
@@ -278,7 +282,7 @@ class Parser:
             node=self.__SingleCondition()
             return self.__I_F([node])
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __EventStatement(self):
         next_token=self.lexer.lookahead()
@@ -290,7 +294,7 @@ class Parser:
             node=self.__SingleEvent()
             return self.__I_C([node])
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __ActionStatement(self):
         next_token=self.lexer.lookahead()
@@ -302,7 +306,7 @@ class Parser:
             node = self.__Procedure()
             return self.__I_K([node])
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __String(self):
         next_token=self.lexer.get_next_token()
@@ -312,7 +316,7 @@ class Parser:
         if prod_id == 52:
             return ASTNode("String",next_token.attr['str'].strip("'"),[])
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __LogicalOr(self):
         next_token=self.lexer.get_next_token()
@@ -322,7 +326,7 @@ class Parser:
         if prod_id == 74:
             return ASTNode("Or","Or",[])
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __LogicalAnd(self):
         next_token=self.lexer.get_next_token()
@@ -331,7 +335,7 @@ class Parser:
         if prod_id == 73:
             return ASTNode("And","And",[])
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __SingleEvent(self):
         next_token=self.lexer.lookahead()
@@ -343,7 +347,7 @@ class Parser:
             EventList_syn=self.__EventList()
             return ASTNode('SingleEvent',"",[Channel_node,EventList_syn])
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __Channel(self):
         next_token=self.lexer.get_next_token()
@@ -366,7 +370,7 @@ class Parser:
             self.__match(']')
             return node
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __Event(self,):
         next_token=self.lexer.lookahead()
@@ -377,7 +381,7 @@ class Parser:
             next_token=self.__match("<ID>")
             return ASTNode("Event",next_token.attr['entry'],[])
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
 
     def __Sequence(self):
@@ -400,7 +404,7 @@ class Parser:
                 return ASTNode('Sequence','',[I_E_syn])
 
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __Instance(self):
         next_token=self.lexer.lookahead()
@@ -410,9 +414,9 @@ class Parser:
         if prod_id == 25:
             next_token=self.__match('<ID>')
             id_entry=next_token.attr['entry']
-            return ASTNode('<ID>',id_entry,[])
+            return ASTNode('Name',id_entry,[])
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __I_F(self,inh):
         next_token=self.lexer.lookahead()
@@ -426,7 +430,7 @@ class Parser:
         elif prod_id == 27:
             return ASTNode('ConditionStatement',"",inh)
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __LogicalOperator(self):
         next_token=self.lexer.lookahead()
@@ -438,7 +442,7 @@ class Parser:
         elif prod_id == 30:
             return self.__LogicalOr()
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __SingleCondition(self):
         next_token=self.lexer.lookahead()
@@ -456,7 +460,7 @@ class Parser:
             node3 = self.__AdditiveExpression1()
             return ASTNode("SingleCondition", "", [node1, node2, node3])
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __I_G(self,inh):
         next_token=self.lexer.lookahead()
@@ -468,7 +472,7 @@ class Parser:
         elif prod_id ==34:
             return ASTNode('Factor',"",inh)
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __I_H(self,inh):
         next_token=self.lexer.lookahead()
@@ -480,7 +484,7 @@ class Parser:
         elif prod_id ==36:
             return ASTNode("Expression","",inh)
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __AdditiveExpression1(self):
         next_token=self.lexer.lookahead()
@@ -495,7 +499,7 @@ class Parser:
             node2=self.__I_G([node1])
             return self.__I_H([node2])
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __AdditiveExpression2(self,inh):
         next_token=self.lexer.lookahead()
@@ -511,7 +515,7 @@ class Parser:
             node = self.__FactorExpression1()
             return self.__I_H(inh+[ASTNode("AddOp", "-", []), node])
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __Comparison(self,):
         next_token=self.lexer.get_next_token()
@@ -529,7 +533,7 @@ class Parser:
             self.__match("HISTORY")
             return self.__HistInput()
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __HistInput(self):
         next_token=self.lexer.lookahead()
@@ -550,7 +554,7 @@ class Parser:
             condition_node=ASTNode("Condition",'',[node1,comp,node2])
             return ASTNode("HistStatement","",[time_node,condition_node])
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __FactorExpression1(self):
         next_token=self.lexer.lookahead()
@@ -561,7 +565,7 @@ class Parser:
             node=self.__Factors()
             return self.__I_G([node])
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __FactorExpression2(self,inh):
         next_token=self.lexer.lookahead()
@@ -577,7 +581,7 @@ class Parser:
             node = self.__Factors()
             return self.__I_G(inh + [ASTNode("MultiOp", "/", []), node])
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __Query(self):
         next_token=self.lexer.lookahead()
@@ -589,7 +593,7 @@ class Parser:
             syn=self.__StoredProcedure()
             return syn
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __Factors(self,):
         next_token=self.lexer.lookahead()
@@ -607,7 +611,7 @@ class Parser:
         elif prod_id == 48:
             return self.__AdditiveExpression1()
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __Boolean(self,):
         next_token=self.lexer.lookahead()
@@ -621,7 +625,7 @@ class Parser:
             self.__match('TRUE')
             return ASTNode("Boolean",True,[])
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __EventParameter(self,):
         next_token=self.lexer.lookahead()
@@ -636,7 +640,7 @@ class Parser:
             id2=next_token.attr['entry']
             return ASTNode("EventParam",[id1,id2],[])
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __F_A(self,inh):
         next_token=self.lexer.lookahead()
@@ -652,7 +656,7 @@ class Parser:
             number=float(inh+'.'+number2)
             return ASTNode("Digits",number,[])
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __StoredProcedure(self,):
         next_token=self.lexer.lookahead()
@@ -675,7 +679,7 @@ class Parser:
             syn=self.__ParamInput()
             return self.__I_I([syn])
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __I_I(self,inh):
         next_token=self.lexer.lookahead()
@@ -689,7 +693,7 @@ class Parser:
             syn=self.__ParamInput()
             return self.__I_I(inh+[syn])
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __ParamInput(self):
         next_token=self.lexer.lookahead()
@@ -703,7 +707,7 @@ class Parser:
         elif prod_id == 60:
             return self.__IntegerLiteral()
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __I_J(self,inh):
         next_token=self.lexer.lookahead()
@@ -717,7 +721,7 @@ class Parser:
             node=self.__Channel()
             return self.__I_J(inh+[node])
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __ChannelList(self,):
         next_token=self.lexer.lookahead()
@@ -733,7 +737,7 @@ class Parser:
             self.__match(')')
             return syn
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __I_K(self,inh):
         next_token=self.lexer.lookahead()
@@ -747,7 +751,7 @@ class Parser:
         elif prod_id == 68:
             return ASTNode("Actions","",inh)
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __Procedure(self,):
         next_token=self.lexer.lookahead()
@@ -764,7 +768,7 @@ class Parser:
             else:
                 return ASTNode("Procedure", "", [name])
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()
 
     def __I_L(self):
         next_token=self.lexer.lookahead()
@@ -776,4 +780,4 @@ class Parser:
         elif prod_id == 71:
             return None
         else:
-            raise Exception("zyp: Unexpected Error")
+            self.__raise_inner_error()

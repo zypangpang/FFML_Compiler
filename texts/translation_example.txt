@@ -1,0 +1,199 @@
+POLICYID ['ATM01234']
+ON ONL SEQ(300)[password_change,transfer]
+   OR
+   ATM[transfer]
+IF QUERY TOTALDEBIT(ATM,transfer.sortcode,transfer.account_number,1)*(transfer.value+1)>=500
+   AND
+   transfer.value >= 500
+   OR
+   HISTORY(4) [QUERY TOTALDEBIT((ATM,CHQ),transfer.sortcode,transfer.accountnumber)>=250.12]>=2
+   //HISTORY(4) [withdraw.value>=250.12]>=2
+   //AND
+   //QUERY BADACCOUNT(transfer.dest_accountnumber) = TRUE
+THEN ALERT(transfer.transid,transfer.sortcode,transfer.accountnumer)
+     AND
+     BLOCK(transfer.transid,transfer.accountnumber);
+
+//Generated Code
+//ON part
+Table Event_1: //SEQ
+SELECT * FROM ONL
+MATCH_RECOGNIZE (
+    PARTITION BY account_number
+    ORDER BY rowtime
+    MEASURES
+       transfer.sortcode AS transfer_sortcode,
+       transfer.account_number AS transfer_account_number,
+       transfer.value AS transfer_value,
+       transfer.transid AS transfer_transid
+    ONE ROW PER MATCH
+    AFTER MATCH SKIP PAST LAST ROW
+    PATTERN (password_change transfer) WITHIN INTERVAL '300' SECOND
+    DEFINE
+       password_change AS password_change.type='password_change',
+       transfer AS transfer.type='transfer'
+)
+Table Event_2:
+SELECT sortcode AS transfer_sortcode,
+account_number AS transfer_account_number,
+value AS transfer_value,
+transid AS transfer_transid
+FROM ATM WHERE type='transfer'
+
+//IF part
+'''Simple version'''
+ATM_transfer:
+SELECT * FROM ATM
+WHERE type = 'transfer'
+
+Totaldebit_1:
+SELECT account_number, SUM(value) AS totaldebit,
+TUMBLE_START(rowtime, INTERVAL '1' DAY) as start_time
+FROM ATM_transfer
+GROUP BY
+account_number, TUMBLE(rowtime, INTERVAL '1' DAY)
+
+CREATE VIEW Totaldebit_2 AS
+SELECT account_number, totaldebit FROM
+(
+   account_number,totaldebit,
+   ROW_NUMBER() OVER(PARTITION BY account_number ORDER BY start_time DESC) as rownum
+   FROM Totaldebit_1
+)
+WHERE rownum = 1
+
+//transfer.value+1
+Math_result_1
+SELECT account_number, transid, value+1 AS result
+FROM Event
+
+//Multiply
+Math_result_2:
+SELECT Math_result_1.transid AS transid, Totaldebit_2.totaldebit*Math_result_1.result AS result
+FROM Totaldebit_1 INNER JOIN Math_result_1
+ON Totaldebit_1.account_number = Math_result.account_number
+//Comparison
+Comparison_1:
+SELECT transid FROM Math_result_2
+WHERE result >=500
+//Final condition output
+Condition_1:
+SELECT Event.sortcode AS sortcode,
+   Event.transid AS transid,
+   Event.value AS value,
+   Event.account_number AS account_number
+FROM Comparison_1 INNER JOIN Event
+ON Comparison_1.transid = Event.transid
+'''
+
+''' Complex version '''
+/*Join_1:
+SELECT ATM.transid AS transid,
+ATM.account_number AS account_number,
+ATM.value AS value
+FROM Event INNER JOIN ATM
+ON Event.account_number = ATM.account_number AND ATM.type='transfer'
+*/
+ATM_transfer:
+SELECT * FROM ATM
+WHERE type = 'transfer'
+
+Totaldebit_1:
+SELECT
+account_number, SUM(value) AS totaldebit
+FROM ATM_transfer
+WHERE DATEDIFF(rowtime,CURRENT_TIMESTAMP) < 1
+GROUP BY account_number
+
+/*If no other math operations
+SELECT Event.transid
+FROM Event INNER JOIN Totaldebit_1
+ON Event.account_number = Totaldebit_1.account_number
+*/
+
+//transfer.value+1
+Math_result_1
+SELECT account_number, transid, value+1 AS result
+FROM Event
+
+//Multiply
+Math_result_2:
+SELECT Math_result_1.transid AS transid, Totaldebit_1.totaldebit*Math_result_1.result AS result
+FROM Totaldebit_1 INNER JOIN Math_result
+ON Totaldebit_1.account_number = Math_result.account_number
+//Comparison
+Comparison_1:
+SELECT transid FROM Math_result_2
+WHERE result >=500
+//Final condition output
+Condition_1:
+SELECT Event.sortcode AS sortcode,
+   Event.transid AS transid,
+   Event.value AS value,
+   Event.account_number AS account_number
+FROM Comparison_1 INNER JOIN Event
+ON Comparison_1.transid = Event.transid
+'''
+
+//AND cond 2
+Condition_2:
+SELECT * FROM Condition_1
+WHERE value >= 500
+
+//OR cond 3
+Channel_1:
+(SELECT transid, account_number, value FROM ATM
+  WHERE type = 'transfer')
+UNION ALL
+(SELECT transid, account_number, value FROM CHQ
+  WHERE type = 'transfer')
+
+Totaldebit_3:
+SELECT account_number, SUM(value) AS totaldebit,
+TUMBLE_START(rowtime, INTERVAL '1' DAY) as start_time
+FROM Channel_1
+GROUP BY
+account_number, TUMBLE(rowtime, INTERVAL '1' DAY)
+
+CREATE VIEW Totaldebit_4 AS
+SELECT account_number, totaldebit FROM
+(
+   account_number,totaldebit,
+   ROW_NUMBER() OVER(PARTITION BY account_number ORDER BY start_time DESC) as rownum
+   FROM Totaldebit_1
+)
+WHERE rownum <= 4
+
+Comparison_3:
+SELECT * FROM Totaldebit_4
+WHERE totaldebit >= 250.12
+
+Count_1:
+SELECT *,COUNT(*) AS day_count
+FROM Comparison_3
+GROUP BY account_number
+
+Comparison_4:
+SELECT account_number FROM Count_1
+WHERE day_count >= 2
+
+//Final condition output
+Condition_3:
+SELECT Event.sortcode AS sortcode,
+   Event.transid AS transid,
+   Event.value AS value,
+   Event.account_number AS account_number
+FROM Comparison_4 INNER JOIN Event
+ON Comparison_4.account_number = Event.account_number
+//Union
+Condition_4:
+(SELECT * FROM Conditon_2)
+Union
+(SELECT * FROM Condition_3)
+
+//THEN part
+INSERT INTO ALERT
+SELECT transid, sortcode,accountnumber FROM Condition_4
+
+INSERT INTO BLOCK
+SELECT transid,accountnumber FROM Condition_4

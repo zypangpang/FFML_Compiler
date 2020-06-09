@@ -6,6 +6,7 @@ from constants import EMPTY
 from lexer import Lexer,get_symbol_table,get_dfa_from_file
 from parser import  Parser
 from preprocess import Preprocessor
+from translator import ASTVisitor
 
 
 def check_nullable(ff: FirstFollowSet):
@@ -87,6 +88,7 @@ if __name__ == '__main__':
     lexer = Lexer(code_file, get_dfa_from_file(dfa_path), get_symbol_table())
     parser=Parser(grammar,parse_table,start_symbol,lexer)
     root = parser.parse_AST()
+    code_file.close()
 
     '''
     try:
@@ -101,6 +103,9 @@ if __name__ == '__main__':
         print_tree(root,0)
     '''
     print_tree(root, 0)
-    code_file.close()
+
+    visitor=ASTVisitor()
+    visitor.visit(root)
+
     print("Done.")
 

@@ -15,6 +15,9 @@ class ELE_TYPE(Enum):
     NONTERM = 1
     COMBI = 2
 
+class SYMBOL_TYPE(Enum):
+    EVENT = 0
+    CHANNEL=1
 
 EBNF_OP_SYMBOL = ['+', '*', '?']
 EMPTY = '#'

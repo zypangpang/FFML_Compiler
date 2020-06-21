@@ -128,25 +128,41 @@ class MyTemplate:
         self.__process_meta()
 
     def __process_meta(self):
-        p=re.compile("\\{(\\w+)\\}")
+        p=re.compile("\\$(\\w+)\\$")
         m=p.findall(self.meta_str)
         for x in m:
             self.__emtpy_dict[x]=None
 
     def set_value(self,empty,val):
         if empty not in self.__emtpy_dict:
-            raise Exception(f"{emtpy} template param not exist")
+            raise Exception(f"{empty} template param not exist")
         self.__emtpy_dict[empty]=val
+        return self
 
     def get_code(self):
         code:str=self.meta_str
         for empty,val in self.__emtpy_dict.items():
-            code=code.replace("{"+empty+"}",val)
+            if val is None:
+                raise Exception(f"{empty} not set")
+            code=code.replace(f"${empty}$",val)
         return code
+class ListTemplate:
+    def __init__(self,conj):
+        self.conj=conj
+        self.l=None
 
+    def set_list(self, l):
+        self.l = l
+
+    def get_code(self):
+        return f" {self.conj} ".join(self.l)
+
+
+def bt(s):
+    return f"`{s}`"
 
 if __name__ == '__main__':
-    test_str = "abc{NAME} ext{TABLE} 'd12'"
+    test_str = "abc$NAME$ ext$TABLE$ 'd12'"
     tp=MyTemplate(test_str)
     tp.set_value("NAME","test")
     tp.set_value("TABLE","abc")

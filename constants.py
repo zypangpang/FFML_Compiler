@@ -28,6 +28,7 @@ COMMON_COUNTER={
     'comparison':"comparison"
 }
 
+
 EBNF_OP_SYMBOL = ['+', '*', '?']
 EMPTY = '#'
 ENDMARK = '$'
@@ -41,3 +42,12 @@ KEYWORDS=['POLICYID' , 'THEN',  'TRUE', 'ONL', 'ATM', 'QUERY',  'CHQ', 'CNP', 'H
         , 'OTH', 'DD', 'IF',  'ON', 'CP', 'SEQ',]
 
 COMMENT_SYM = '//'
+
+# Translator related
+SEQ_UNIT="MINUTE"
+SEQ_TIME=5
+PREDEFINED_EVENTS={
+    "transfer",
+    "password_change",
+    "login"
+}

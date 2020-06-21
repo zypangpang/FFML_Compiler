@@ -1,6 +1,6 @@
-from constants import SYMBOL_TYPE,COMMON_COUNTER
+from constants import SYMBOL_TYPE,COMMON_COUNTER,SEQ_TIME,SEQ_UNIT,PREDEFINED_EVENTS
 from parser import ASTNode
-from utils import log_print
+from utils import log_print,MyTemplate,bt,ListTemplate
 """
 Symbol Attr Memo:
 Policy: obj
@@ -111,10 +111,18 @@ class Policy:
             ans+=f"\n> {s}"
         return ans
 
+def get_template(name):
+    if name == 'SELECT':
+        return MyTemplate("SELECT $PROJ$ FROM $TABLE$ WHERE $CONDITION$")
+    if name == 'PROJ':
+        return MyTemplate("SELECT $PROJ$ FROM $TABLE$")
+    elif name == 'CREATE_VIEW':
+        return MyTemplate("CREATE VIEW $NAME$ AS ( $BODY$ )")
+    elif name == 'UNION_ALL':
+        return ListTemplate("UNION ALL")
 
 
 class ASTVisitor:
-
     def __init__(self):
         self.counters = SymbolCounter()
         self.policies={}
@@ -160,25 +168,95 @@ class ASTVisitor:
         log_print("visit SingleEvent")
         children=node.children
         channel=self.visit(children[0])
-        final_event_table=self.visit(children[1],channel=channel)
+        params=self.visit(children[1])
+        if isinstance(params,str):
+            ori_event_name=params
+            t_id=self.counters.get_counter(COMMON_COUNTER['event'])
+            t_name=f"event_{t_id}"
+            template_select=get_template("SELECT")\
+                .set_value("PROJ","*")\
+                .set_value("TABLE",bt(ori_event_name))\
+                .set_value("CONDITION",f"channel='{channel}'")
+            template_view=get_template("CREATE_VIEW")\
+                .set_value("NAME",bt(t_name))\
+                .set_value("BODY",template_select.get_code())
+            sql=template_view.get_code()
+            self.policy.add_sql(sql)
+            self.symbol_table.define(Symbol(t_name,SYMBOL_TYPE.TABLE,{'q':template_select.get_code()}))
+            final_event_table=t_name
+        else:
+            seq_time=params['time']
+            event_seq=params['event_list']
+            for event in event_seq:
+                t_name=f"{channel}_{event}"
+                tselect=get_template("SELECT")\
+                    .set_value("PROJ","*")\
+                    .set_value("TABLE",bt(event))\
+                    .set_value("CONDITION",f"channel = '{channel}'")
+                template_view = get_template("CREATE_VIEW") \
+                    .set_value("NAME", bt(t_name)) \
+                    .set_value("BODY", tselect.get_code())
+                self.symbol_table.define(Symbol(t_name,SYMBOL_TYPE.TABLE,{'q':tselect.get_code()}))
+                self.policy.add_sql(template_view.get_code())
+
+            for event in event_seq:
+                tunion=get_template("UNION_ALL")\
+                    .set_value(
+                        "A",get_template("PROJ")
+                                     .set_value("PROJ","accountnumber,rowtime,eventtype")
+                                     .set_value("NAME",bt(f"{channel}_{event}")))\
+                    .set_value(
+                    "A", get_template("PROJ")
+                        .set_value("PROJ", "accountnumber,rowtime,eventtype")
+                        .set_value("NAME", bt(f"{channel}_{event}"))) \
+ \
+                )
+
+
+            final_event_table="abc"
         self.events.append(final_event_table)
 
     def visit_Channel(self,node:ASTNode):
         log_print("visit Channel")
         return node.value
 
-    def visit_Event(self,node:ASTNode, channel):
+    def visit_Event(self,node:ASTNode):
         log_print("visit Event")
         ori_event_name=node.value['str']
-        self.symbol_table.define(Symbol(ori_event_name,SYMBOL_TYPE.EVENT))
-        t_id=self.counters.get_counter(COMMON_COUNTER['event'])
-        t_name=f"event_{t_id}"
-        sql=f"CREATE VIEW {t_name} AS SELECT * FROM {ori_event_name} WHERE channel = '{channel}'"
-        self.policy.add_sql(sql)
-        return t_name
+        if ori_event_name not in PREDEFINED_EVENTS:
+            raise Exception("Event not supported")
+        try:
+            self.symbol_table.define(Symbol(ori_event_name,SYMBOL_TYPE.EVENT))
+        except Exception as e:
+            pass
+        return ori_event_name
+        #t_id=self.counters.get_counter(COMMON_COUNTER['event'])
+        #t_name=f"event_{t_id}"
+        #sql=f"CREATE VIEW {t_name} AS SELECT * FROM {ori_event_name} WHERE channel = '{channel}'"
+        #self.policy.add_sql(sql)
+        #return t_name
 
-    def visit_Sequence(self,node,channel):
+    def visit_Sequence(self,node):
         log_print("visit Sequence")
+        res_data={
+            "time":None,
+            "event_list":None
+        }
+        if len(node.children)==1:
+            log_print(f"Warning: No SEQ time specified. Use default {SEQ_TIME} {SEQ_UNIT}")
+            res_data['time']=SEQ_TIME
+            res_data['event_list'] = self.visit(node.children[0])
+        else:
+            res_data['time']=self.visit(node.children[0])
+            res_data['event_list']=self.visit(node.children[1])
+        return res_data
+
+    def visit_EventSeq(self,node):
+        log_print("visit EventSeq")
+        event_list=[]
+        for c in node.children:
+            event_list.append(self.visit(c))
+        return event_list
 
 
 

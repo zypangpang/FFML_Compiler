@@ -106,6 +106,8 @@ if __name__ == '__main__':
 
     visitor=ASTVisitor()
     visitor.visit(root)
+    print(visitor.symbol_table)
+    print(visitor.policy)
 
     print("Done.")
 

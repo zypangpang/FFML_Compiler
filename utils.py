@@ -1,4 +1,5 @@
 from constants import TERM_BEGIN_CHARS, ELE_TYPE
+import re
 
 class SyntaxError(Exception):
     def __init__(self,type,desc):
@@ -52,6 +53,9 @@ def format_print(func, title, table=False):
         print('_' * dash_number)
 
     return inner_func
+
+def log_print(content):
+    print(f">>> LOG: {content}")
 
 
 def print_dict(my_dict, key_order=None):
@@ -116,3 +120,39 @@ def print_tree(root,depth,last=False):
         print_tree(c,depth+1)
     if root.children:
         print_tree(root.children[-1],depth+1,True)
+
+class MyTemplate:
+    def __init__(self,meta_str):
+        self.meta_str=meta_str
+        self.__emtpy_dict={}
+        self.__process_meta()
+
+    def __process_meta(self):
+        p=re.compile("\\{(\\w+)\\}")
+        m=p.findall(self.meta_str)
+        for x in m:
+            self.__emtpy_dict[x]=None
+
+    def set_value(self,empty,val):
+        if empty not in self.__emtpy_dict:
+            raise Exception(f"{emtpy} template param not exist")
+        self.__emtpy_dict[empty]=val
+
+    def get_code(self):
+        code:str=self.meta_str
+        for empty,val in self.__emtpy_dict.items():
+            code=code.replace("{"+empty+"}",val)
+        return code
+
+
+if __name__ == '__main__':
+    test_str = "abc{NAME} ext{TABLE} 'd12'"
+    tp=MyTemplate(test_str)
+    tp.set_value("NAME","test")
+    tp.set_value("TABLE","abc")
+    print(tp.get_code())
+
+
+
+
+

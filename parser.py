@@ -13,6 +13,8 @@ class ASTNode:
         #    self.depth=0
         #else:
         #    self.depth=parent.depth+1
+    def __str__(self):
+        return f"<{self.type}: {self.value}, {len(self.children)} children>"
 
 class Parser:
     def __init__(self,grammar,parse_table,start_symbol,lexer):

@@ -18,6 +18,15 @@ class ELE_TYPE(Enum):
 class SYMBOL_TYPE(Enum):
     EVENT = 0
     CHANNEL=1
+    TABLE =2
+    POLICY =3
+
+COMMON_COUNTER={
+    'table':"table",
+    'event':"event",
+    'condition':"condition",
+    'comparison':"comparison"
+}
 
 EBNF_OP_SYMBOL = ['+', '*', '?']
 EMPTY = '#'

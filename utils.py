@@ -1,4 +1,4 @@
-from constants import TERM_BEGIN_CHARS, ELE_TYPE
+from constants import TERM_BEGIN_CHARS, ELE_TYPE,LOG_LEVEL
 import re
 
 class SyntaxError(Exception):
@@ -54,8 +54,14 @@ def format_print(func, title, table=False):
 
     return inner_func
 
-def log_print(content):
-    print(f">>> LOG: {content}")
+def log_print(content,level=LOG_LEVEL.INFO):
+    #level_str={
+    #    LOG_LEVEL.INFO:"info",
+    #    LOG_LEVEL.WARN: "Warning",
+    #    LOG_LEVEL.ERROR: "ERROR",
+    #}
+    #level_s=level_str[level]
+    print(f">>> {level.name.upper()}: {content}")
 
 
 def print_dict(my_dict, key_order=None):
@@ -146,20 +152,30 @@ class MyTemplate:
                 raise Exception(f"{empty} not set")
             code=code.replace(f"${empty}$",val)
         return code
+    def __str__(self):
+        return self.get_code()
+
 class ListTemplate:
     def __init__(self,conj):
         self.conj=conj
         self.l=None
 
     def set_list(self, l):
-        self.l = l
+        self.l = [f"( {item} )" for item in l]
+        return self
 
     def get_code(self):
         return f" {self.conj} ".join(self.l)
 
+    def __str__(self):
+        return self.get_code()
+
 
 def bt(s):
-    return f"`{s}`"
+    if isinstance(s,list):
+        return [f"`{item}`" for item in s]
+    else:
+        return f"`{s}`"
 
 if __name__ == '__main__':
     test_str = "abc$NAME$ ext$TABLE$ 'd12'"

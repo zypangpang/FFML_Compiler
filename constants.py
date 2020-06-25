@@ -6,6 +6,13 @@ from enum import Enum
 #    PLUS = 1
 #    MULTIPLE = 2
 #    QUESTION = 3
+class LOG_LEVEL(Enum):
+    '''
+    Grammar Element type
+    '''
+    INFO = 0
+    WARNING = 1
+    ERROR = 2
 
 class ELE_TYPE(Enum):
     '''
@@ -21,12 +28,23 @@ class SYMBOL_TYPE(Enum):
     TABLE =2
     POLICY =3
 
-COMMON_COUNTER={
-    'table':"table",
-    'event':"event",
-    'condition':"condition",
-    'comparison':"comparison"
-}
+class COUNTER_TYPE(Enum):
+    TABLE=0
+    EVENT=1
+    CONDITION=2
+    COMPARISON=3
+class TIME_UNIT(Enum):
+    SECOND=0
+    MINUTE=1
+    HOUR=2
+    DAY=3
+
+#COUNTER_NAME={
+#    COUNTER_TYPE.TABLE:"table",
+#    COUNTER_TYPE.EVENT: "event",
+#    COUNTER_TYPE.CONDITION: "condition",
+#    COUNTER_TYPE.COMPARISON: "comparison",
+#}
 
 
 EBNF_OP_SYMBOL = ['+', '*', '?']
@@ -44,10 +62,12 @@ KEYWORDS=['POLICYID' , 'THEN',  'TRUE', 'ONL', 'ATM', 'QUERY',  'CHQ', 'CNP', 'H
 COMMENT_SYM = '//'
 
 # Translator related
-SEQ_UNIT="MINUTE"
+SEQ_UNIT=TIME_UNIT.MINUTE
 SEQ_TIME=5
 PREDEFINED_EVENTS={
     "transfer",
     "password_change",
     "login"
 }
+
+

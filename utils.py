@@ -177,6 +177,13 @@ def bt(s):
     else:
         return f"`{s}`"
 
+def log_info(func):
+    def inner(*args,**kwargs):
+        log_print(f"call {func.__name__}")
+        return func(*args,**kwargs)
+    return inner
+
+
 if __name__ == '__main__':
     test_str = "abc$NAME$ ext$TABLE$ 'd12'"
     tp=MyTemplate(test_str)

@@ -108,7 +108,7 @@ if __name__ == '__main__':
     visitor.visit(root)
     print(visitor.symbol_table)
     print(visitor.policy)
-    print(visitor.events)
+    print(visitor.event_table)
 
     print("Done.")
 

@@ -93,7 +93,7 @@ WHERE result >=500
 
 //Final condition output
 >>> condition_1:
-SELECT * FROM ONL_transfer
+SELECT * FROM event
 WHERE transid IN (
   SELECT transid FROM comparison_1
 )

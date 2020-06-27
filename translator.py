@@ -97,7 +97,6 @@ class SymbolTable:
     def __str__(self):
         return f"GlobalScope: {self.symbols}"
 
-
 class Policy:
     def __init__(self,name):
         self.name=name
@@ -131,8 +130,19 @@ MATCH_RECOGNIZE (
        $DEFINE$
 )"""),
        "SELECT_IN":MyTemplate("SELECT $PROJ$ FROM $TABLE$ WHERE $IN_COL$ IN ( $IN_BODY$ )"),
+        "WINDOW":MyTemplate("""SELECT $PROJ$,TUMBLE_START(rowtime, INTERVAL $INTERVAL$) AS starttime 
+FROM $TABLE$ 
+GROUP BY $KEY$,TUMBLE(rowtime, INTERVAL $INTERVAL$)"""),
+        "TOPN":MyTemplate("""SELECT $PROJ$ FROM
+(
+   SELECT $PROJ$,
+   ROW_NUMBER() OVER(PARTITION BY $KEY$ ORDER BY $ORDER$ DESC) as rownum
+   FROM $TABLE$
+)
+WHERE rownum = $N$ """),
     }
     return t_map[name]
+
 
 
 class ASTVisitor:
@@ -150,7 +160,7 @@ class ASTVisitor:
     def __define_table(self,name,sql_temp):
         self.symbol_table.define(Symbol(name, SYMBOL_TYPE.TABLE, {'q': sql_temp.get_code()}))
 
-    def __create_view(self,sql_template,t_name):
+    def create_view(self, sql_template, t_name):
         template_view = get_template("CREATE_VIEW") \
             .set_value("NAME", bt(t_name)) \
             .set_value("BODY", sql_template.get_code())
@@ -158,7 +168,7 @@ class ASTVisitor:
         self.symbol_table.define(Symbol(t_name, SYMBOL_TYPE.TABLE, {'q': sql_template.get_code()}))
         return t_name
 
-    def __get_new_name(self,type):
+    def get_new_name(self, type):
         t_id=self.counters.inc_counter(type)
         return f"{type.name.lower()}_{t_id}"
 
@@ -221,7 +231,7 @@ class ASTVisitor:
                               .set_value("TABLE",et)
                               .get_code() for et in event_tables]
         template_union=get_template("UNION_ALL").set_list(event_sqls)
-        self.event_table=self.__create_view(template_union,self.__get_new_name(COUNTER_TYPE.EVENT))
+        self.event_table=self.create_view(template_union, self.get_new_name(COUNTER_TYPE.EVENT))
 
 
     def visit_SingleEvent(self,node:ASTNode):
@@ -245,8 +255,8 @@ class ASTVisitor:
 #            sql=template_view.get_code()
 #            self.policy.add_sql(sql)
 #            self.symbol_table.define(Symbol(t_name,SYMBOL_TYPE.TABLE,{'q':template_select.get_code()}))
-            t_name=self.__get_new_name(COUNTER_TYPE.EVENT)
-            self.__create_view(template_select,t_name)
+            t_name=self.get_new_name(COUNTER_TYPE.EVENT)
+            self.create_view(template_select, t_name)
             final_event_table=t_name
         else:
             # process seq time
@@ -266,7 +276,7 @@ class ASTVisitor:
                     .set_value("PROJ","*")\
                     .set_value("TABLE",bt(event))\
                     .set_value("CONDITION",f"channel = '{channel}'")
-                self.__create_view(tselect,t_name)
+                self.create_view(tselect, t_name)
                 union_list.append(get_template("PROJ")
                                      .set_value("PROJ","accountnumber,rowtime,eventtype")
                                      .set_value("TABLE",bt(t_name))
@@ -275,8 +285,8 @@ class ASTVisitor:
             union_smt=get_template("UNION_ALL").set_list(union_list)
             #t_id = self.counters.inc_counter(COMMON_COUNTER['event'])
             #t_name = f"event_{t_id}"
-            t_name=self.__get_new_name(COUNTER_TYPE.EVENT)
-            self.__create_view(union_smt,t_name)
+            t_name=self.get_new_name(COUNTER_TYPE.EVENT)
+            self.create_view(union_smt, t_name)
 
             bt_event_seq=bt(event_seq)
             match_template=get_template("MATCH")\
@@ -290,8 +300,8 @@ class ASTVisitor:
                                 .set_value("TIME_UNIT",SEQ_UNIT.name)\
                                 .set_value("DEFINE",','.join([f"{item} AS {item}.eventtype='{item}'"
                                                               for item in event_seq]))
-            t_name=self.__get_new_name(COUNTER_TYPE.EVENT)
-            self.__create_view(match_template,t_name)
+            t_name=self.get_new_name(COUNTER_TYPE.EVENT)
+            self.create_view(match_template, t_name)
 
             in_template=get_template("SELECT_IN")\
                             .set_value("PROJ","*")\
@@ -299,8 +309,8 @@ class ASTVisitor:
                             .set_value("IN_COL","accountnumber")\
                             .set_value("IN_BODY",get_template("PROJ").set_value("PROJ","accountnumber")
                                                                     .set_value("TABLE",t_name).get_code())
-            t_name=self.__get_new_name(COUNTER_TYPE.EVENT)
-            self.__create_view(in_template,t_name)
+            t_name=self.get_new_name(COUNTER_TYPE.EVENT)
+            self.create_view(in_template, t_name)
 
             final_event_table=t_name
 
@@ -361,13 +371,33 @@ class ASTVisitor:
     def visit_Query(self,node):
         func_name=self.visit(node.children[0])['str']
         params=self.visit(node.children[1])
-        print(func_name,params)
+        t_name,value_name=BuiltInFuncs.call_func(func_name,params,self)
+        return t_name,value_name
+
+    def visit_Factor(self,node):
+        if len(node.children) == 1:
+            return self.visit(node.children[0])
+        if node.children[0].type=="Query":
+            query_t_name,query_value_name=self.visit(node.children[0])
+            print(self.visit(node.children[1]))
+            print(self.visit(node.children[2]))
+        else:
+            # simple mathematical computation.
+            pass
+
+
+    def visit_MultiOp(self,node):
+        return node.value
+
+
+
+
 
     def visit_ChannelList(self,node):
         return [self.visit(c) for c in node.children]
 
     def visit_Params(self,node):
-        return [self.visit(c) for c in node.children]
+        return [{'type':c.type,'value':self.visit(c)} for c in node.children]
 
     def visit_EventSeq(self,node):
         log_print("visit EventSeq")
@@ -376,6 +406,61 @@ class ASTVisitor:
             event_list.append(self.visit(c))
         return event_list
 
+class BuiltInFuncs:
+    funcs={
+        'TOTALDEBIT':{
+            "param_type":[('Channel','Digits'),('ChannelList','Digits'),
+                          ('Channel',),("ChannelList",)],
+        }
+    }
+    @classmethod
+    def verify_params(cls,func_name,params):
+        param_types=cls.funcs[func_name]['param_type']
+        ok=False
+        for _params in param_types:
+            given_params=tuple(c['type'] for c in params)
+            if given_params == _params:
+                ok=True
+                break
+        if not ok:
+            raise Exception(f"Parameters do not match. Parameter types of '{func_name}' is ({param_types}).")
+    @classmethod
+    def totaldebit(cls,params,visitor:ASTVisitor):
+        if params[0]['type']=="Channel":
+            channel=params[0]['value']
+            table_name=f"{channel}_transfer"
+            if visitor.symbol_table.resolve(table_name) is None:
+                t=get_template("SELECT").set_value("PROJ","*").set_value("TABLE","transfer")\
+                                        .set_value("CONDITION",f"channel='{channel}'")
+                visitor.create_view(t,table_name)
+        else:
+            table_name='_'.join(params[0]['value'])+"_transfer"
+            if visitor.symbol_table.resolve(table_name) is None:
+                condition_str=" OR ".join([f"channel='{c}'" for c in params[0]['value']])
+                t=get_template("SELECT").set_value("PROJ","*").set_value("TABLE","transfer")\
+                                        .set_value("CONDITION",condition_str)
+                visitor.create_view(t,table_name)
+        time= int(params[1]['value']) if len(params)==2 else 1
+        t_name=visitor.get_new_name(COUNTER_TYPE.TOTALDEBIT)
+        template=get_template("WINDOW").set_value("PROJ","accountnumber, SUM(value) AS totaldebit")\
+                                        .set_value("TABLE",table_name)\
+                                        .set_value("KEY","accountnumber")\
+                                        .set_value("INTERVAL",f"'{time}' DAY")
+        visitor.create_view(template,t_name)
+        template=get_template("TOPN").set_value("PROJ","accountnumber, totaldebit")\
+                    .set_value("KEY","accountnumber")\
+                    .set_value("ORDER","starttime")\
+                    .set_value("TABLE",t_name)\
+                    .set_value("N",'1')
+        t_name=visitor.get_new_name(COUNTER_TYPE.TOTALDEBIT)
+        visitor.create_view(template,t_name)
+        return t_name,'totaldebit'
+
+
+    @classmethod
+    def call_func(cls,name,params,visitor):
+        cls.verify_params(name,params)
+        return getattr(cls,name.lower())(params,visitor)
 
 if __name__ == '__main__':
     def abc(a,b,c):

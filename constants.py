@@ -33,6 +33,8 @@ class COUNTER_TYPE(Enum):
     EVENT=1
     CONDITION=2
     COMPARISON=3
+    TOTALDEBIT=4
+
 class TIME_UNIT(Enum):
     SECOND=0
     MINUTE=1
@@ -69,5 +71,6 @@ PREDEFINED_EVENTS={
     "password_change",
     "login"
 }
+
 
 

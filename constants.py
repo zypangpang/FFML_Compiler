@@ -34,6 +34,7 @@ class COUNTER_TYPE(Enum):
     CONDITION=2
     COMPARISON=3
     TOTALDEBIT=4
+    MATH=5
 
 class TIME_UNIT(Enum):
     SECOND=0

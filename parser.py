@@ -553,7 +553,7 @@ class Parser:
             node2=self.__AdditiveExpression1()
             self.__match(']')
             time_node=ASTNode("Int",time,[])
-            condition_node=ASTNode("SingleCondition",'',[node1,comp,node2])
+            condition_node=ASTNode("Condition",'',[node1,comp,node2])
             return ASTNode("HistStatement","",[time_node,condition_node])
         else:
             self.__raise_inner_error()

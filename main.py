@@ -105,10 +105,10 @@ if __name__ == '__main__':
     print_tree(root, 0)
 
     visitor=ASTVisitor()
-    visitor.visit(root)
+    policies=visitor.visit(root)
     print(visitor.symbol_table)
-    print(visitor.policy)
-    print(visitor.event_table)
+    for p in policies:
+        print(p)
 
     print("Done.")
 

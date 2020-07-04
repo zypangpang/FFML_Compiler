@@ -27,6 +27,7 @@ class SYMBOL_TYPE(Enum):
     CHANNEL=1
     TABLE =2
     POLICY =3
+    INTERNAL = 4
 
 class COUNTER_TYPE(Enum):
     TABLE=0

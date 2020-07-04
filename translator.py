@@ -97,7 +97,11 @@ class SymbolTable:
         if name in self.symbols:
             return self.symbols[name]
         else:
-            raise Exception("Symbol not exist")
+            raise KeyError("Symbol not exist")
+
+    def remove(self,name):
+        if name in self.symbols:
+            self.symbols.pop(name)
 
     def __str__(self):
         return f"GlobalScope: {self.symbols}"
@@ -162,16 +166,10 @@ ON $LEFT$.$KEY$ = $RIGHT$.$KEY$ WHERE $CONDITION$"""),
 class ASTVisitor:
     def __init__(self):
         self.counters = SymbolCounter()
-        self.policies = {}
+        self.policies = []
 
     def __reset_policy(self):
-        self.event_table = None
-        self.policy = Policy(None)
         self.symbol_table = SymbolTable()
-        self.event = None
-        self.event_table = None
-        self.condition_table=None
-        self.hist_days=1
 
     def __define_table(self, name, sql_temp):
         self.symbol_table.define(Symbol(name, SYMBOL_TYPE.TABLE, {'q': sql_temp.get_code()}))
@@ -184,7 +182,11 @@ class ASTVisitor:
         template_view = get_template("CREATE_VIEW") \
             .set_value("NAME", bt(t_name)) \
             .set_value("BODY", sql_template.get_code())
-        self.policy.add_sql(template_view.get_code())
+        try:
+            policy=self.symbol_table.resolve('policy').attr['obj']
+        except KeyError:
+            raise Exception("Policy object undefined")
+        policy.add_sql(template_view.get_code())
         self.symbol_table.define(Symbol(t_name, SYMBOL_TYPE.TABLE, {'q': sql_template.get_code(), **kwargs}))
         return t_name
 
@@ -210,14 +212,18 @@ class ASTVisitor:
     def visit_PolicyList(self, node: ASTNode):
         for ps in node.children:
             self.__reset_policy()
-            self.visit(ps)
+            policy=self.visit(ps)
+            self.policies.append(policy)
         log_print(f"Generated {len(node.children)} policies.")
+        return self.policies
 
     def visit_PolicyStatement(self, node: ASTNode):
-        self.policy.name = self.visit(node.children[0])
-        self.symbol_table.define(Symbol(self.policy.name, SYMBOL_TYPE.POLICY, {'obj': self.policy}))
+        policy_name = self.visit(node.children[0])
+        policy=Policy(policy_name)
+        self.symbol_table.define(Symbol('policy', SYMBOL_TYPE.POLICY, {'obj':policy}))
         for cld in node.children[1:]:
             self.visit(cld)
+        return policy
 
     def visit_String(self, node: ASTNode):
         log_print("visit String " + node.value)
@@ -225,7 +231,7 @@ class ASTVisitor:
 
     def visit_ConditionStatement(self,node:ASTNode):
         stack=[]
-        table=self.visit(node.children[0],op=None,prev_table=self.event_table)
+        table=self.visit(node.children[0],op=None,prev_table=None)
         stack.append(table)
         i=1
         while i<len(node.children):
@@ -243,37 +249,14 @@ class ASTVisitor:
         lhs:tuple=self.visit(node.children[0])
         comp=self.visit(node.children[1])
         rhs:tuple=self.visit(node.children[2])
-        if isinstance(lhs,tuple) and isinstance(rhs,tuple):
-            left_key = self.symbol_table.resolve(lhs[0]).attr['key']
-            right_key = self.symbol_table.resolve(rhs[0]).attr['key']
+        t_name,key=self.__cal_comp(lhs,comp,rhs)
 
-            key='transid' if left_key=='transid' or right_key == 'transid' else 'accountnumber'
-            id_op = lhs if left_key=='transid' else rhs # the operand with the 'key'
-
-            join_key='accountnumber'
-            if left_key == 'transid' and right_key =='transid':
-                join_key='transid'
-
-            template=get_template("JOIN_WHERE").set_value("PROJ",f"{id_op[0]}.{key} AS {key}")\
-                .set_value("LEFT",lhs[0]).set_value("RIGHT",rhs[0])\
-                .set_value("KEY",join_key).set_value("CONDITION",f"{lhs[0]}.`{lhs[1]}` {comp} {rhs[0]}.`{rhs[1]}`")\
-                .set_value("JOIN_TYPE","INNOR JOIN")
-            t_name=self.get_new_name(COUNTER_TYPE.COMPARISON)
-            self.create_view(template,t_name,key=key)
-        elif isinstance(lhs,tuple):
-            key = self.symbol_table.resolve(lhs[0]).attr['key']
-
-            template=get_template("SELECT").set_value("PROJ",key).set_value("TABLE",lhs[0])\
-                .set_value("CONDITION",f"`{lhs[1]}` {comp} {rhs}")
-            t_name=self.get_new_name(COUNTER_TYPE.COMPARISON)
-            self.create_view(template,t_name,key=key)
-        else:
-           raise Exception("The left side of comparison must be Query or expression with parameters.")
+        table = prev_table
         if op is None or op=='OR':
-            table=self.event_table
-        elif op=='AND':
-            table=prev_table
-        print(op)
+            try:
+                table=self.symbol_table.resolve("event_table").attr['value']
+            except KeyError:
+                raise Exception("Event table undefined")
 
         template=get_template("SELECT_IN").set_value("PROJ","*").set_value("TABLE",table)\
                     .set_value("IN_COL",key).set_value("IN_BODY",get_template("PROJ")
@@ -283,6 +266,12 @@ class ASTVisitor:
         self.create_view(template,t_name,key='transid')
         return t_name
 
+    def visit_Condition(self,node):
+        lhs: tuple = self.visit(node.children[0])
+        comp = self.visit(node.children[1])
+        rhs: tuple = self.visit(node.children[2])
+        t_name, _ = self.__cal_comp(lhs, comp, rhs)
+        return t_name
 
     def visit_Actions(self, node: ASTNode):
         log_print("visit Actions")
@@ -302,13 +291,15 @@ class ASTVisitor:
         for e in events:
             if e != events[0]:
                 raise Exception("The last event of all event conditions need to be identical")
-        self.event = events[0]
+        self.symbol_table.define(Symbol("event",SYMBOL_TYPE.INTERNAL,{'type':'str','value':events[0]}))
         event_sqls = [get_template("PROJ")
                           .set_value("PROJ", "*")
                           .set_value("TABLE", et)
                           .get_code() for et in event_tables]
         template_union = get_template("UNION_ALL").set_list(event_sqls)
-        self.event_table = self.create_view(template_union, self.get_new_name(COUNTER_TYPE.EVENT), key='transid')
+        event_table = self.create_view(template_union, self.get_new_name(COUNTER_TYPE.EVENT), key='transid')
+        self.symbol_table.define(Symbol("event_table",SYMBOL_TYPE.INTERNAL,{'type':'str','value':event_table}))
+
 
     def visit_SingleEvent(self, node: ASTNode):
         log_print("visit SingleEvent")
@@ -417,8 +408,12 @@ class ASTVisitor:
     def visit_EventParam(self, node):
         event = node.value[0]['str']  # format: {name:'<ID>', str: 'xxx'}
         param = node.value[1]['str']
-        if event != self.event:
-            raise Exception(f"Only parameters of last event '{self.event}' can be used")
+        try:
+            legal_event=self.symbol_table.resolve("event").attr['value']
+        except KeyError:
+            raise Exception("No event statement defined")
+        if event != legal_event:
+            raise Exception(f"Only parameters of last event '{legal_event}' can be used")
         return (event, param)
 
     def visit_Sequence(self, node):
@@ -444,24 +439,37 @@ class ASTVisitor:
         return node.value
 
     def visit_Query(self, node):
-        interval=1
-        daycount=self.hist_days
         func_name = self.visit(node.children[0])['str']
         params = self.visit(node.children[1])
-        if len(params) == 1:
-            params.append({'type':'Digits','value':interval})
-        if len(params) == 2:
-            params.append({'type': 'Int', 'value': daycount})
+
+        if func_name == 'TOTALDEBIT':
+            if len(params) == 1:
+                params.append({'type':'Digits','value':1})
+            if len(params) == 2:
+                try:
+                    daycount=self.symbol_table.resolve("hist_days").attr['value']
+                except KeyError:
+                    daycount=1
+                params.append({'type': 'Int', 'value': daycount})
+            else:
+                raise Exception("TOTALDEBIT requires 1 or 2 parameters: Channel|ChannelList [interval]")
+
         t_name, value_name = BuiltInFuncs.call_func(func_name, params, self)
         return t_name, value_name
 
-    def visit_Time(self,node):
-        return node.value
+    def visit_Int(self,node):
+        return int(node.value)
 
     def visit_HistStatement(self,node:ASTNode):
-        self.hist_days=self.visit(node.children[0])
+        hist_days=self.visit(node.children[0])
+        try:
+            self.symbol_table.resolve("hist_days").attr['value']=hist_days
+        except KeyError:
+            self.symbol_table.define(Symbol("hist_days",SYMBOL_TYPE.INTERNAL,{'type':'int', 'value':hist_days}))
+
         cond_table=self.visit(node.children[1])
-        self.hist_days=1
+        self.symbol_table.resolve("hist_days").attr['value'] = 1
+
         template=get_template("GROUPBY").set_value("PROJ","accountnumber, COUNT(*) AS daycount")\
                                     .set_value("TABLE",cond_table).set_value("KEY","accountnumber")
         t_name=self.get_new_name(COUNTER_TYPE.COUNT)
@@ -472,21 +480,52 @@ class ASTVisitor:
     #def visit_Condition(self,node:ASTNode,daycount):
     #    pass
 
+    def __get_key_and_idop(self,lhs,rhs):
+        left_key = self.symbol_table.resolve(lhs[0]).attr['key']
+        right_key = self.symbol_table.resolve(rhs[0]).attr['key']
+
+        key = 'transid' if left_key == 'transid' or right_key == 'transid' else 'accountnumber'
+        id_op = lhs if left_key == 'transid' else rhs  # the operand with the 'key'
+
+        join_key = 'accountnumber'
+        if left_key == 'transid' and right_key == 'transid':
+            join_key = 'transid'
+        return key,id_op,join_key
+
+    def __cal_comp(self,lhs,comp,rhs):
+        if isinstance(lhs,tuple) and isinstance(rhs,tuple):
+            key,id_op,join_key=self.__get_key_and_idop(lhs,rhs)
+            template=get_template("JOIN_WHERE").set_value("PROJ",f"{id_op[0]}.{key} AS {key}")\
+                .set_value("LEFT",lhs[0]).set_value("RIGHT",rhs[0])\
+                .set_value("KEY",join_key).set_value("CONDITION",f"{lhs[0]}.`{lhs[1]}` {comp} {rhs[0]}.`{rhs[1]}`")\
+                .set_value("JOIN_TYPE","INNOR JOIN")
+            t_name=self.get_new_name(COUNTER_TYPE.COMPARISON)
+            self.create_view(template,t_name,key=key)
+        elif isinstance(lhs,tuple):
+            key = self.symbol_table.resolve(lhs[0]).attr['key']
+            template=get_template("SELECT").set_value("PROJ",key).set_value("TABLE",lhs[0])\
+                .set_value("CONDITION",f"`{lhs[1]}` {comp} {rhs}")
+            t_name=self.get_new_name(COUNTER_TYPE.COMPARISON)
+            self.create_view(template,t_name,key=key)
+        else:
+           raise Exception("The left side of comparison must be Query or expression with parameters.")
+        return t_name,key
 
     def __cal_op(self, left, op, right):
         print(left, op, right)
         if isinstance(left, float) and isinstance(right, float):
             return self.__math_cal(left, op, right)
         if isinstance(left, tuple) and isinstance(right, tuple):
-            id_operator = left if self.symbol_table.resolve(left[0]).attr['key'] == 'transid' else right
+            #id_operator = left if self.symbol_table.resolve(left[0]).attr['key'] == 'transid' else right
+            key,id_op,join_key=self.__get_key_and_idop(left,right)
             template = get_template("JOIN").set_value("PROJ",
-                                                      f"{id_operator[0]}.transid AS transid, {left[0]}.`{left[1]}`"
+                                                      f"{id_op[0]}.{key} AS {key}, {left[0]}.`{left[1]}`"
                                                       f" {op} {right[0]}.`{right[1]}` AS `result`") \
                 .set_value("LEFT", left[0]).set_value("RIGHT", right[0]) \
-                .set_value("KEY", "accountnumber") \
+                .set_value("KEY", join_key) \
                 .set_value("JOIN_TYPE", "INNOR JOIN")
             t_name = self.get_new_name(COUNTER_TYPE.MATH)
-            self.create_view(template, t_name, key='transid')
+            self.create_view(template, t_name, key=key)
             return t_name, 'result'
         if isinstance(right, tuple):
             t = left
@@ -494,12 +533,11 @@ class ASTVisitor:
             right = t
 
         if isinstance(left, tuple):
-            keys = "accountnumber,transid" if self.symbol_table.resolve(left[0]).attr[
-                                                  'key'] == 'transid' else "accountnumber"
-            template = get_template("PROJ").set_value("PROJ", f"{keys},`{left[1]}` {op} {right} AS `result`") \
+            key = self.symbol_table.resolve(left[0]).attr['key']
+            template = get_template("PROJ").set_value("PROJ", f"{key},`{left[1]}` {op} {right} AS `result`") \
                 .set_value("TABLE", left[0])
             t_name = self.get_new_name(COUNTER_TYPE.MATH)
-            self.create_view(template, t_name, key=self.symbol_table.resolve(left[0]).attr['key'])
+            self.create_view(template, t_name, key=key)
             return t_name, 'result'
 
     def __cal_expression(self, node):
@@ -580,7 +618,7 @@ class BuiltInFuncs:
             table_name = f"{channel}_transfer"
             try:
                 visitor.symbol_table.resolve(table_name)
-            except:
+            except KeyError:
                 t = get_template("SELECT").set_value("PROJ", "*").set_value("TABLE", "transfer") \
                     .set_value("CONDITION", f"channel='{channel}'")
                 visitor.create_view(t, table_name, key='transid')
@@ -588,7 +626,7 @@ class BuiltInFuncs:
             table_name = '_'.join(params[0]['value']) + "_transfer"
             try:
                 visitor.symbol_table.resolve(table_name)
-            except:
+            except KeyError:
                 condition_str = " OR ".join([f"channel='{c}'" for c in params[0]['value']])
                 t = get_template("SELECT").set_value("PROJ", "*").set_value("TABLE", "transfer") \
                     .set_value("CONDITION", condition_str)

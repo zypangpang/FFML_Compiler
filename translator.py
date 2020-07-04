@@ -137,6 +137,7 @@ MATCH_RECOGNIZE (
        $DEFINE$
 )"""),
         "SELECT_IN": MyTemplate("SELECT $PROJ$ FROM $TABLE$ WHERE $IN_COL$ IN ( $IN_BODY$ )"),
+        "GROUPBY": MyTemplate("""SELECT $PROJ$ FROM $TABLE$ GROUP BY $KEY$""" ),
         "WINDOW": MyTemplate("""SELECT $PROJ$,TUMBLE_START(rowtime, INTERVAL $INTERVAL$) AS starttime 
 FROM $TABLE$ 
 GROUP BY $KEY$,TUMBLE(rowtime, INTERVAL $INTERVAL$)"""),
@@ -146,7 +147,7 @@ GROUP BY $KEY$,TUMBLE(rowtime, INTERVAL $INTERVAL$)"""),
    ROW_NUMBER() OVER(PARTITION BY $KEY$ ORDER BY $ORDER$ DESC) as rownum
    FROM $TABLE$
 )
-WHERE rownum = $N$ """),
+WHERE rownum $CONDITION$ """),
         "JOIN": MyTemplate("""SELECT $PROJ$ 
 FROM $LEFT$ $JOIN_TYPE$ $RIGHT$
 ON $LEFT$.$KEY$ = $RIGHT$.$KEY$"""),
@@ -170,6 +171,7 @@ class ASTVisitor:
         self.event = None
         self.event_table = None
         self.condition_table=None
+        self.hist_days=1
 
     def __define_table(self, name, sql_temp):
         self.symbol_table.define(Symbol(name, SYMBOL_TYPE.TABLE, {'q': sql_temp.get_code()}))
@@ -237,33 +239,34 @@ class ASTVisitor:
         return "OR"
 
     @log_info
-    def visit_SingleCondition(self, node: ASTNode,op,prev_table):
+    def visit_SingleCondition(self, node: ASTNode,op=None,prev_table=None):
         lhs:tuple=self.visit(node.children[0])
         comp=self.visit(node.children[1])
         rhs:tuple=self.visit(node.children[2])
         if isinstance(lhs,tuple) and isinstance(rhs,tuple):
-            key='transid' if self.symbol_table.resolve(lhs[0]).attr['key'] == 'transid' and \
-                            self.symbol_table.resolve(rhs[0]).attr['key']=='transid' else 'accountnumber'
-            key='accountnumber'
-            if self.symbol_table.resolve(lhs[0]).attr['key'] == 'transid':
-                id_op=lhs
-                if self.symbol_table.resolve(rhs[0]).attr['key']=='transid':
-                    key='transid'
-            elif self.symbol_table.resolve(rhs[0]).attr['key'] == 'transid':
-                id_op='rhs'
-            else:
-                raise Exception("At least one side of comparison needs to have 'transid' as the key")
-            template=get_template("JOIN_WHERE").set_value("PROJ",f"{id_op[0]}.transid AS transid")\
+            left_key = self.symbol_table.resolve(lhs[0]).attr['key']
+            right_key = self.symbol_table.resolve(rhs[0]).attr['key']
+
+            key='transid' if left_key=='transid' or right_key == 'transid' else 'accountnumber'
+            id_op = lhs if left_key=='transid' else rhs # the operand with the 'key'
+
+            join_key='accountnumber'
+            if left_key == 'transid' and right_key =='transid':
+                join_key='transid'
+
+            template=get_template("JOIN_WHERE").set_value("PROJ",f"{id_op[0]}.{key} AS {key}")\
                 .set_value("LEFT",lhs[0]).set_value("RIGHT",rhs[0])\
-                .set_value("KEY",key).set_value("CONDITION",f"{lhs[0]}.`{lhs[1]}` {comp} {rhs[0]}.`{rhs[1]}`")\
+                .set_value("KEY",join_key).set_value("CONDITION",f"{lhs[0]}.`{lhs[1]}` {comp} {rhs[0]}.`{rhs[1]}`")\
                 .set_value("JOIN_TYPE","INNOR JOIN")
             t_name=self.get_new_name(COUNTER_TYPE.COMPARISON)
-            self.create_view(template,t_name,key='transid')
+            self.create_view(template,t_name,key=key)
         elif isinstance(lhs,tuple):
-            template=get_template("SELECT").set_value("PROJ","transid").set_value("TABLE",lhs[0])\
+            key = self.symbol_table.resolve(lhs[0]).attr['key']
+
+            template=get_template("SELECT").set_value("PROJ",key).set_value("TABLE",lhs[0])\
                 .set_value("CONDITION",f"`{lhs[1]}` {comp} {rhs}")
             t_name=self.get_new_name(COUNTER_TYPE.COMPARISON)
-            self.create_view(template,t_name,key='transid')
+            self.create_view(template,t_name,key=key)
         else:
            raise Exception("The left side of comparison must be Query or expression with parameters.")
         if op is None or op=='OR':
@@ -273,8 +276,8 @@ class ASTVisitor:
         print(op)
 
         template=get_template("SELECT_IN").set_value("PROJ","*").set_value("TABLE",table)\
-                    .set_value("IN_COL","transid").set_value("IN_BODY",get_template("PROJ")
-                                                             .set_value("PROJ","transid")
+                    .set_value("IN_COL",key).set_value("IN_BODY",get_template("PROJ")
+                                                             .set_value("PROJ",key)
                                                              .set_value("TABLE",t_name).get_code())
         t_name=self.get_new_name(COUNTER_TYPE.CONDITION)
         self.create_view(template,t_name,key='transid')
@@ -335,7 +338,7 @@ class ASTVisitor:
             # process seq time
             seq_time = params['time']
             if not seq_time.is_integer():
-                log_print(f"{seq_time} is truncated to {int(seq_time)}", LOG_LEVEL.WARNING)
+                log_print(f"SEQ: {seq_time} is truncated to {int(seq_time)}", LOG_LEVEL.WARNING)
                 seq_time = int(seq_time)
             if SEQ_UNIT == TIME_UNIT.HOUR and seq_time >= 24 or seq_time >= 60:
                 raise Exception(
@@ -441,10 +444,34 @@ class ASTVisitor:
         return node.value
 
     def visit_Query(self, node):
+        interval=1
+        daycount=self.hist_days
         func_name = self.visit(node.children[0])['str']
         params = self.visit(node.children[1])
+        if len(params) == 1:
+            params.append({'type':'Digits','value':interval})
+        if len(params) == 2:
+            params.append({'type': 'Int', 'value': daycount})
         t_name, value_name = BuiltInFuncs.call_func(func_name, params, self)
         return t_name, value_name
+
+    def visit_Time(self,node):
+        return node.value
+
+    def visit_HistStatement(self,node:ASTNode):
+        self.hist_days=self.visit(node.children[0])
+        cond_table=self.visit(node.children[1])
+        self.hist_days=1
+        template=get_template("GROUPBY").set_value("PROJ","accountnumber, COUNT(*) AS daycount")\
+                                    .set_value("TABLE",cond_table).set_value("KEY","accountnumber")
+        t_name=self.get_new_name(COUNTER_TYPE.COUNT)
+        self.create_view(template,t_name,key="accountnumber")
+        return t_name,"daycount"
+
+
+    #def visit_Condition(self,node:ASTNode,daycount):
+    #    pass
+
 
     def __cal_op(self, left, op, right):
         print(left, op, right)
@@ -530,8 +557,7 @@ class ASTVisitor:
 class BuiltInFuncs:
     funcs = {
         'TOTALDEBIT': {
-            "param_type": [('Channel', 'Digits'), ('ChannelList', 'Digits'),
-                           ('Channel',), ("ChannelList",)],
+            "param_type": [('Channel', 'Digits', 'Int'), ('ChannelList', 'Digits','Int'), ],
         }
     }
 
@@ -568,18 +594,21 @@ class BuiltInFuncs:
                     .set_value("CONDITION", condition_str)
                 visitor.create_view(t, table_name, key='transid')
 
-        time = int(params[1]['value']) if len(params) == 2 else 1
+        if not params[1]['value'].is_integer():
+            log_print(f"TOTALDEBIT: {params[1]['value']} is truncated to {int(params[1]['value'])}",LOG_LEVEL.WARNING)
+        interval = int(params[1]['value'])
+        daycount = int(params[2]['value'])
         t_name = visitor.get_new_name(COUNTER_TYPE.TOTALDEBIT)
         template = get_template("WINDOW").set_value("PROJ", "accountnumber, SUM(value) AS totaldebit") \
             .set_value("TABLE", table_name) \
             .set_value("KEY", "accountnumber") \
-            .set_value("INTERVAL", f"'{time}' DAY")
+            .set_value("INTERVAL", f"'{interval}' DAY")
         visitor.create_view(template, t_name, key='accountnumber')
         template = get_template("TOPN").set_value("PROJ", "accountnumber, totaldebit") \
             .set_value("KEY", "accountnumber") \
             .set_value("ORDER", "starttime") \
             .set_value("TABLE", t_name) \
-            .set_value("N", '1')
+            .set_value("CONDITION", f'<= {daycount}')
         t_name = visitor.get_new_name(COUNTER_TYPE.TOTALDEBIT)
         visitor.create_view(template, t_name, key='accountnumber')
         return t_name, 'totaldebit'

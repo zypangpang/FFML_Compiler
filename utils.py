@@ -1,4 +1,4 @@
-from constants import TERM_BEGIN_CHARS, ELE_TYPE,LOG_LEVEL
+from constants import TERM_BEGIN_CHARS, ELE_TYPE,LOG_LEVEL,DEBUG
 import re
 
 class SyntaxError(Exception):
@@ -61,6 +61,10 @@ def log_print(content,level=LOG_LEVEL.INFO):
     #    LOG_LEVEL.ERROR: "ERROR",
     #}
     #level_s=level_str[level]
+    if not DEBUG:
+        if level == LOG_LEVEL.INFO:
+            return
+
     print(f">>> {level.name.upper()}: {content}")
 
 

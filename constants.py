@@ -1,6 +1,6 @@
 from enum import Enum
 
-
+DEBUG=True
 #class EBNF_OP(Enum):
 #    NONE = 0
 #    PLUS = 1

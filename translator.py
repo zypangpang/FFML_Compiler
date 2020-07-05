@@ -201,7 +201,7 @@ class ASTVisitor:
 
     def __getfunc(self, name):
         def default_func(node):
-            log_print(f"visit {name}")
+            #log_print(f"visit {name}")
             for c in node.children:
                 self.visit(c)
 
@@ -219,7 +219,7 @@ class ASTVisitor:
             self.__reset_policy()
             policy=self.visit(ps)
             self.policies.append(policy)
-        log_print(f"Generated {len(node.children)} policies.")
+        #log_print(f"Generated {len(node.children)} policies.")
         return self.policies
 
     def visit_PolicyStatement(self, node: ASTNode):
@@ -231,7 +231,7 @@ class ASTVisitor:
         return policy
 
     def visit_String(self, node: ASTNode):
-        log_print("visit String " + node.value)
+        #log_print("visit String " + node.value)
         return node.value
 
     def visit_ConditionStatement(self,node:ASTNode):
@@ -251,7 +251,7 @@ class ASTVisitor:
     def visit_Or(self,node):
         return "OR"
 
-    @log_info
+    #@log_info
     def visit_SingleCondition(self, node: ASTNode,op=None,prev_table=None):
         lhs:tuple=self.visit(node.children[0])
         comp=self.visit(node.children[1])
@@ -285,7 +285,7 @@ class ASTVisitor:
         return node.value
 
 
-    @log_info
+    #@log_info
     def visit_EventStatement(self, node: ASTNode):
         events = []
         event_tables = []
@@ -307,7 +307,7 @@ class ASTVisitor:
 
 
     def visit_SingleEvent(self, node: ASTNode):
-        log_print("visit SingleEvent")
+        #log_print("visit SingleEvent")
         children = node.children
         channel = self.visit(children[0])
         params = self.visit(children[1])
@@ -391,11 +391,11 @@ class ASTVisitor:
         return ori_event_name, final_event_table
 
     def visit_Channel(self, node: ASTNode):
-        log_print("visit Channel")
+        #log_print("visit Channel")
         return node.value
 
     def visit_Event(self, node: ASTNode):
-        log_print("visit Event")
+        #log_print("visit Event")
         ori_event_name = node.value['str']
         if ori_event_name not in PREDEFINED_EVENTS:
             raise Exception("Event not supported")
@@ -422,7 +422,7 @@ class ASTVisitor:
         return (event, param)
 
     def visit_Sequence(self, node):
-        log_print("visit Sequence")
+        #log_print("visit Sequence")
         res_data = {
             "time": None,
             "event_list": None
@@ -437,7 +437,7 @@ class ASTVisitor:
         return res_data
 
     def visit_Digits(self, node):
-        log_print("visit Digits")
+        #log_print("visit Digits")
         return node.value
 
     def visit_Name(self, node):
@@ -506,7 +506,7 @@ class ASTVisitor:
         return t_name,key
 
     def __cal_op(self, left, op, right):
-        print(left, op, right)
+        #print(left, op, right)
         if isinstance(left, float) and isinstance(right, float):
             return self.__math_cal(left, op, right)
         if isinstance(left, tuple) and isinstance(right, tuple):
@@ -542,7 +542,7 @@ class ASTVisitor:
             op = self.visit(node.children[i])
             rhs = self.visit(node.children[i + 1])
             res = self.__cal_op(result_stack.pop(), op, rhs)
-            print(res)
+            #print(res)
             result_stack.append(res)
             i += 2
         return result_stack.pop()
@@ -579,7 +579,7 @@ class ASTVisitor:
         return [{'type': c.type, 'value': self.visit(c)} for c in node.children]
 
     def visit_EventSeq(self, node):
-        log_print("visit EventSeq")
+        #log_print("visit EventSeq")
         event_list = []
         for c in node.children:
             event_list.append(self.visit(c))

@@ -158,6 +158,7 @@ ON $LEFT$.$KEY$ = $RIGHT$.$KEY$"""),
         "JOIN_WHERE":MyTemplate("""SELECT $PROJ$ 
 FROM $LEFT$ $JOIN_TYPE$ $RIGHT$
 ON $LEFT$.$KEY$ = $RIGHT$.$KEY$ WHERE $CONDITION$"""),
+        "INSERT": MyTemplate("""INSERT INTO $TABLE$ $CONTENT$"""),
     }
 
     return t_map[name]
@@ -182,13 +183,17 @@ class ASTVisitor:
         template_view = get_template("CREATE_VIEW") \
             .set_value("NAME", bt(t_name)) \
             .set_value("BODY", sql_template.get_code())
+        self.add_policy_sql(template_view)
+        self.symbol_table.define(Symbol(t_name, SYMBOL_TYPE.TABLE, {'q': sql_template.get_code(), **kwargs}))
+        return t_name
+
+    def add_policy_sql(self,template):
         try:
             policy=self.symbol_table.resolve('policy').attr['obj']
         except KeyError:
             raise Exception("Policy object undefined")
-        policy.add_sql(template_view.get_code())
-        self.symbol_table.define(Symbol(t_name, SYMBOL_TYPE.TABLE, {'q': sql_template.get_code(), **kwargs}))
-        return t_name
+        policy.add_sql(template.get_code())
+
 
     def get_new_name(self, type):
         t_id = self.counters.inc_counter(type)
@@ -238,6 +243,8 @@ class ASTVisitor:
             op=self.visit(node.children[i])
             stack.append(self.visit(node.children[i+1],op=op,prev_table=stack.pop()))
             i+=2
+        t_name=stack.pop()
+        self.symbol_table.define(Symbol("condition_table",SYMBOL_TYPE.INTERNAL,{"type":"str","value":t_name}))
 
     def visit_And(self,node):
         return "AND"
@@ -273,8 +280,6 @@ class ASTVisitor:
         t_name, _ = self.__cal_comp(lhs, comp, rhs)
         return t_name
 
-    def visit_Actions(self, node: ASTNode):
-        log_print("visit Actions")
 
     def visit_Comp(self,node:ASTNode):
         return node.value
@@ -439,23 +444,12 @@ class ASTVisitor:
         return node.value
 
     def visit_Query(self, node):
+        return self.visit_Procedure(node)
+
+    def visit_Procedure(self,node):
         func_name = self.visit(node.children[0])['str']
         params = self.visit(node.children[1])
-
-        if func_name == 'TOTALDEBIT':
-            if len(params) == 1:
-                params.append({'type':'Digits','value':1})
-            if len(params) == 2:
-                try:
-                    daycount=self.symbol_table.resolve("hist_days").attr['value']
-                except KeyError:
-                    daycount=1
-                params.append({'type': 'Int', 'value': daycount})
-            else:
-                raise Exception("TOTALDEBIT requires 1 or 2 parameters: Channel|ChannelList [interval]")
-
-        t_name, value_name = BuiltInFuncs.call_func(func_name, params, self)
-        return t_name, value_name
+        return BuiltInFuncs.call_func(func_name, params, self)
 
     def visit_Int(self,node):
         return int(node.value)
@@ -594,9 +588,15 @@ class ASTVisitor:
 
 class BuiltInFuncs:
     funcs = {
-        'TOTALDEBIT': {
+        'totaldebit': {
             "param_type": [('Channel', 'Digits', 'Int'), ('ChannelList', 'Digits','Int'), ],
-        }
+        },
+        'alert': {
+            "param_type": [('EventParam','EventParam')],
+        },
+        'block': {
+            "param_type": [('EventParam', 'EventParam')],
+        },
     }
 
     @classmethod
@@ -608,9 +608,61 @@ class BuiltInFuncs:
             if given_params == _params:
                 ok = True
                 break
-        if not ok:
-            raise Exception(f"Parameters do not match. Parameter types of '{func_name}' is ({param_types}).")
+        return ok
 
+    @classmethod
+    def build_params(cls, func_name, params, visitor):
+        return getattr(cls, f"params_{func_name}")(params, visitor)
+
+    # Param check and build function for each builtin function
+    @classmethod
+    def params_totaldebit(cls,params,visitor):
+        try:
+            daycount = visitor.symbol_table.resolve("hist_days").attr['value']
+        except KeyError:
+            daycount = 1
+        if len(params) == 1:
+            params.append({'type':'Digits','value':1})
+        if len(params) == 2:
+            params.append({'type': 'Int', 'value': daycount})
+        if not cls.verify_params("totaldebit",params):
+            raise Exception("TOTALDEBIT requires 1 or 2 parameters: Channel|ChannelList, [interval]")
+        return params
+
+    @classmethod
+    def params_alert(cls,params,visitor):
+        if not cls.verify_params("alert",params):
+            raise Exception("ALERT requires 2 parameters: Event.transid, Event.accountnumber")
+        return params
+
+    @classmethod
+    def params_block(cls, params, visitor):
+        if not cls.verify_params("block", params):
+            raise Exception("BLOCK requires 2 parameters: Event.transid, Event.accountnumber")
+        return params
+
+    # Procedure for each builtin function
+    @classmethod
+    def __insert_table(cls, t_name, params, visitor):
+        try:
+            cond_table = visitor.symbol_table.resolve("condition_table").attr['value']
+        except KeyError:
+            raise Exception("Condition table not defined")
+        proj = ','.join([bt(param['value'][1]) for param in params])
+        template = get_template("INSERT").set_value("TABLE", t_name) \
+            .set_value("CONTENT", get_template("PROJ")
+                       .set_value("PROJ", proj)
+                       .set_value("TABLE", cond_table).get_code())
+        visitor.add_policy_sql(template)
+
+    @classmethod
+    def alert(cls,params,visitor):
+        cls.__insert_table('alert', params, visitor)
+
+    @classmethod
+    def block(cls, params, visitor):
+        cls.__insert_table('block', params, visitor)
+        
     @classmethod
     def totaldebit(cls, params, visitor: ASTVisitor):
         if params[0]['type'] == "Channel":
@@ -651,10 +703,12 @@ class BuiltInFuncs:
         visitor.create_view(template, t_name, key='accountnumber')
         return t_name, 'totaldebit'
 
+    # Main call entry
     @classmethod
     def call_func(cls, name, params, visitor):
-        cls.verify_params(name, params)
-        return getattr(cls, name.lower())(params, visitor)
+        name=name.lower()
+        params=cls.build_params(name, params,visitor)
+        return getattr(cls, name)(params, visitor)
 
 
 if __name__ == '__main__':

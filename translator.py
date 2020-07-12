@@ -90,7 +90,7 @@ class SymbolTable:
 
     def define(self, sym: Symbol):
         if sym.name in self.symbols:
-            raise Exception(f"Policy {sym.name} redefined")
+            log_print(f"Symbol {sym.name} redefined")
         self.symbols[sym.name] = sym
 
     def resolve(self, name):
@@ -178,6 +178,8 @@ class ASTVisitor:
     def __math_cal(self, a, op, b):
         d = {"+": a + b, "-": a - b, '*': a * b, '/': a / b}
         return d[op]
+    def __update_current_table(self,table):
+        self.symbol_table.define(Symbol("current_table",SYMBOL_TYPE.INTERNAL,{'value':table}))
 
     def create_view(self, sql_template, t_name, **kwargs):
         template_view = get_template("CREATE_VIEW") \
@@ -195,9 +197,12 @@ class ASTVisitor:
         policy.add_sql(template.get_code())
 
 
-    def get_new_name(self, type):
+    def get_new_name(self, type, **kwargs):
         t_id = self.counters.inc_counter(type)
-        return f"{type.name.lower()}_{t_id}"
+        other=None
+        if type == COUNTER_TYPE.PROCEDURE:
+            other=kwargs.get("func_name",None)
+        return f"{type.name.lower()}_{t_id}_{other}" if other else f"{type.name.lower()}_{t_id}"
 
     def __getfunc(self, name):
         def default_func(node):
@@ -236,12 +241,18 @@ class ASTVisitor:
 
     def visit_ConditionStatement(self,node:ASTNode):
         stack=[]
-        table=self.visit(node.children[0],op=None,prev_table=None)
+        table=self.visit(node.children[0])
         stack.append(table)
         i=1
         while i<len(node.children):
             op=self.visit(node.children[i])
-            stack.append(self.visit(node.children[i+1],op=op,prev_table=stack.pop()))
+            cur_table=stack.pop()
+            if op == "AND":
+                self.__update_current_table(cur_table)
+            else:
+                event_table=self.symbol_table.resolve("event_table").attr['value']
+                self.__update_current_table(event_table)
+            stack.append(self.visit(node.children[i+1]))
             i+=2
         t_name=stack.pop()
         self.symbol_table.define(Symbol("condition_table",SYMBOL_TYPE.INTERNAL,{"type":"str","value":t_name}))
@@ -252,18 +263,16 @@ class ASTVisitor:
         return "OR"
 
     #@log_info
-    def visit_SingleCondition(self, node: ASTNode,op=None,prev_table=None):
+    def visit_SingleCondition(self, node: ASTNode):
         lhs:tuple=self.visit(node.children[0])
         comp=self.visit(node.children[1])
         rhs:tuple=self.visit(node.children[2])
         t_name,key=self.__cal_comp(lhs,comp,rhs)
 
-        table = prev_table
-        if op is None or op=='OR':
-            try:
-                table=self.symbol_table.resolve("event_table").attr['value']
-            except KeyError:
-                raise Exception("Event table undefined")
+        try:
+            table=self.symbol_table.resolve("current_table").attr['value']
+        except KeyError:
+            raise Exception("Current table undefined")
 
         template=get_template("SELECT_IN").set_value("PROJ","*").set_value("TABLE",table)\
                     .set_value("IN_COL",key).set_value("IN_BODY",get_template("PROJ")
@@ -277,8 +286,8 @@ class ASTVisitor:
         lhs: tuple = self.visit(node.children[0])
         comp = self.visit(node.children[1])
         rhs: tuple = self.visit(node.children[2])
-        t_name, _ = self.__cal_comp(lhs, comp, rhs)
-        return t_name
+        t_name, key = self.__cal_comp(lhs, comp, rhs)
+        return t_name,key
 
 
     def visit_Comp(self,node:ASTNode):
@@ -304,6 +313,7 @@ class ASTVisitor:
         template_union = get_template("UNION_ALL").set_list(event_sqls)
         event_table = self.create_view(template_union, self.get_new_name(COUNTER_TYPE.EVENT), key='transid')
         self.symbol_table.define(Symbol("event_table",SYMBOL_TYPE.INTERNAL,{'type':'str','value':event_table}))
+        self.__update_current_table(event_table)
 
 
     def visit_SingleEvent(self, node: ASTNode):
@@ -439,6 +449,8 @@ class ASTVisitor:
     def visit_Digits(self, node):
         #log_print("visit Digits")
         return node.value
+    def visit_Boolean(self,node):
+        return "TRUE" if node.value else "FALSE"
 
     def visit_Name(self, node):
         return node.value
@@ -461,13 +473,13 @@ class ASTVisitor:
         except KeyError:
             self.symbol_table.define(Symbol("hist_days",SYMBOL_TYPE.INTERNAL,{'type':'int', 'value':hist_days}))
 
-        cond_table=self.visit(node.children[1])
+        cond_table,key=self.visit(node.children[1])
         self.symbol_table.resolve("hist_days").attr['value'] = 1
 
-        template=get_template("GROUPBY").set_value("PROJ","accountnumber, COUNT(*) AS daycount")\
-                                    .set_value("TABLE",cond_table).set_value("KEY","accountnumber")
+        template=get_template("GROUPBY").set_value("PROJ",f"{key}, COUNT(*) AS daycount")\
+                                    .set_value("TABLE",cond_table).set_value("KEY",key)
         t_name=self.get_new_name(COUNTER_TYPE.COUNT)
-        self.create_view(template,t_name,key="accountnumber")
+        self.create_view(template,t_name,key=key)
         return t_name,"daycount"
 
 
@@ -591,6 +603,9 @@ class BuiltInFuncs:
         'totaldebit': {
             "param_type": [('Channel', 'Digits', 'Int'), ('ChannelList', 'Digits','Int'), ],
         },
+        'badaccount':{
+            "param_type": [('EventParam',)],
+        },
         'alert': {
             "param_type": [('EventParam','EventParam')],
         },
@@ -603,8 +618,8 @@ class BuiltInFuncs:
     def verify_params(cls, func_name, params):
         param_types = cls.funcs[func_name]['param_type']
         ok = False
+        given_params = tuple(c['type'] for c in params)
         for _params in param_types:
-            given_params = tuple(c['type'] for c in params)
             if given_params == _params:
                 ok = True
                 break
@@ -627,6 +642,13 @@ class BuiltInFuncs:
             params.append({'type': 'Int', 'value': daycount})
         if not cls.verify_params("totaldebit",params):
             raise Exception("TOTALDEBIT requires 1 or 2 parameters: Channel|ChannelList, [interval]")
+        return params
+
+    @classmethod
+    def params_badaccount(cls,params,visitor):
+        print(params)
+        if not cls.verify_params("badaccount",params):
+            raise Exception("BADACCOUNT requires 1 parameter: Event.accountnumber")
         return params
 
     @classmethod
@@ -688,8 +710,8 @@ class BuiltInFuncs:
             log_print(f"TOTALDEBIT: {params[1]['value']} is truncated to {int(params[1]['value'])}",LOG_LEVEL.WARNING)
         interval = int(params[1]['value'])
         daycount = int(params[2]['value'])
-        t_name = visitor.get_new_name(COUNTER_TYPE.TOTALDEBIT)
-        template = get_template("WINDOW").set_value("PROJ", "accountnumber, SUM(value) AS totaldebit") \
+        t_name = visitor.get_new_name(COUNTER_TYPE.PROCEDURE,func_name='totaldebit')
+        template = get_template("WINDOW").set_value("PROJ", "accountnumber, SUM(`value`) AS totaldebit") \
             .set_value("TABLE", table_name) \
             .set_value("KEY", "accountnumber") \
             .set_value("INTERVAL", f"'{interval}' DAY")
@@ -699,14 +721,28 @@ class BuiltInFuncs:
             .set_value("ORDER", "starttime") \
             .set_value("TABLE", t_name) \
             .set_value("CONDITION", f'<= {daycount}')
-        t_name = visitor.get_new_name(COUNTER_TYPE.TOTALDEBIT)
+        t_name = visitor.get_new_name(COUNTER_TYPE.PROCEDURE,func_name='totaldebit')
         visitor.create_view(template, t_name, key='accountnumber')
-        return t_name, 'totaldebit'
+        return t_name,'totaldebit'
+
+    @classmethod
+    def badaccount(cls,params,visitor:ASTVisitor):
+        try:
+            cur_table=visitor.symbol_table.resolve("current_table").attr['value']
+        except KeyError:
+            raise Exception("Current table not defined")
+        template=get_template("GROUPBY").set_value("PROJ","accountnumber,BADACCOUNT(accountnumber) AS isbad")\
+                                    .set_value("TABLE",cur_table).set_value("KEY","accountnumber")
+        new_table=visitor.create_view(template,visitor.get_new_name(COUNTER_TYPE.PROCEDURE,func_name='badaccount'),key="accountnumber")
+        return new_table,"isbad"
+
 
     # Main call entry
     @classmethod
     def call_func(cls, name, params, visitor):
         name=name.lower()
+        if name not in cls.funcs:
+            raise KeyError(f"Function {name.upper()} not found")
         params=cls.build_params(name, params,visitor)
         return getattr(cls, name)(params, visitor)
 

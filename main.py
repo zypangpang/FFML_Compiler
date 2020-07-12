@@ -102,15 +102,15 @@ if __name__ == '__main__':
     else:
         print_tree(root,0)
     '''
-    #print_tree(root, 0)
+    print_tree(root, 0)
 
     visitor=ASTVisitor()
     policies=visitor.visit(root)
     policy_num=len(policies)
     print(f"Generated {policy_num} {'policies' if policy_num > 1 else 'policy'}.")
     #print(visitor.symbol_table)
-    #for p in policies:
-    #    print(p)
+    for p in policies:
+        print(p)
 
     print("Done.")
 

@@ -34,7 +34,7 @@ class COUNTER_TYPE(Enum):
     EVENT=1
     CONDITION=2
     COMPARISON=3
-    TOTALDEBIT=4
+    PROCEDURE=4
     MATH=5
     COUNT=6
 

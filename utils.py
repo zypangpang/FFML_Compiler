@@ -1,5 +1,5 @@
 from constants import TERM_BEGIN_CHARS, ELE_TYPE,LOG_LEVEL,DEBUG
-import re
+import re,sys
 
 class SyntaxError(Exception):
     def __init__(self,type,desc):
@@ -121,15 +121,27 @@ def prod_to_str(left, right):
     right_str = " ".join([ele.content for ele in right])
     return f"{left}->{right_str}"
 
-def print_tree(root,depth,last=False):
+def out_tree(root,out_file=None):
+    file = bool(out_file)
+    out_file=open(out_file,"w") if out_file else sys.stdout
+    str_list=get_tree_str_list(root)
+    for s in str_list:
+        out_file.write(s)
+        out_file.write('\n')
+    if file: out_file.close()
+
+
+def get_tree_str_list(root,depth=0,last=False):
+    out_list=[]
     if last:
-        print("┆ "*depth+"┖┄"+root.type)
+        out_list.append("┆ "*depth+"┖┄"+root.type)
     else:
-        print("┆ " * depth  + "┠┄" + root.type)
-    for c in root.children[:-1]:
-        print_tree(c,depth+1)
+        out_list.append("┆ " * depth  + "┠┄" + root.type)
     if root.children:
-        print_tree(root.children[-1],depth+1,True)
+        for c in root.children[:-1]:
+            out_list += get_tree_str_list(c,depth+1)
+        out_list+=get_tree_str_list(root.children[-1],depth+1,True)
+    return out_list
 
 class MyTemplate:
     def __init__(self,meta_str):
@@ -150,7 +162,7 @@ class MyTemplate:
         return self
 
     def get_code(self):
-        code:str=self.meta_str
+        code: str=self.meta_str
         for empty,val in self.__emtpy_dict.items():
             if val is None:
                 raise Exception(f"{empty} not set")
@@ -186,6 +198,15 @@ def log_info(func):
         log_print(f"call {func.__name__}")
         return func(*args,**kwargs)
     return inner
+
+def get_template_from_file(path: str):
+    with open(path) as f:
+        template=MyTemplate(f.read())
+    return template
+
+def output_to_file(path,content):
+    with open(path) as f:
+        f.write(str(content))
 
 
 if __name__ == '__main__':

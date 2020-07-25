@@ -1,5 +1,5 @@
-import sys
-from utils import print_tree,SyntaxError,LexicalError
+import sys,fire
+from utils import out_tree,SyntaxError,LexicalError
 from grammar_related import get_grammar_from_file, left_factoring, get_production_map,get_all_terms,get_all_productions
 from first_follow_set import FirstFollowSet
 from constants import EMPTY
@@ -61,21 +61,69 @@ def read_parse_table(file_path,endmark):
             line = f.readline().strip(strip_chars)
     return M
 
+class Main:
+    def parse(self, in_file=None, ast=False, output=False, out_file=None):
+        try:
+            self.__parse(in_file,ast,output,out_file)
+        except SyntaxError as e:
+            print(e)
+        except LexicalError as e:
+            print(e)
+        except:
+            print("Unexpected error.")
+            raise
+
+
+    def __parse(self, in_file, ast, output, out_file):
+        path = "texts/grammar_LL1.txt"
+        start_symbol, grammar = get_grammar_from_file('BNF', path, '|', ';')
+
+        M_path = "texts/LL1_table.txt"
+        parse_table = read_parse_table(M_path, '#')
+
+        preprocessor = Preprocessor(in_file)
+        new_code_path = preprocessor.process()
+
+        with open(new_code_path,'r') as code_file:
+            dfa_path = 'lexer/dfa.txt'
+            lexer = Lexer(code_file, get_dfa_from_file(dfa_path), get_symbol_table())
+            parser = Parser(grammar, parse_table, start_symbol, lexer)
+            root = parser.parse_AST() if ast else parser.parse_tree()
+            if output:
+                out_tree(root,out_file)
+        return root
+
+
+    def translate(self,in_file=None,out_file=None):
+        try:
+            root=self.__parse(in_file, ast=True,out_file=None,output=False)
+        except SyntaxError as e:
+            print(e)
+            return
+        except LexicalError as e:
+            print(e)
+            return
+        except:
+            print("Unexpected error.")
+            raise
+
+        visitor = ASTVisitor()
+        policies = visitor.visit(root)
+        policy_num = len(policies)
+        print(f"Generated {policy_num} {'policies' if policy_num > 1 else 'policy'}.")
+
+        file=bool(out_file)
+        out_file=open(out_file,'w') if out_file else sys.stdout
+        for p in policies:
+            out_file.write(str(p))
+        if file: out_file.close()
+
 if __name__ == '__main__':
+    fire.Fire(Main)
+    '''
     path = "texts/grammar_LL1.txt" if len(sys.argv) <= 1 else sys.argv[1]
     M_path="texts/LL1_table.txt"
     start_symbol, grammar = get_grammar_from_file('BNF', path, '|', ';')
-
-    #t=get_all_productions(grammar)
-    #t.sort()
-    #for p in t:
-    #    print(p)
-
-    #grammar=left_factoring(grammar)
-    #output_formatted_grammar(start_symbol,grammar,'->','|',';')
-
-    #parse_table=get_parse_table(grammar)
-    #output_parse_table(parse_table,"#")
 
     parse_table=read_parse_table(M_path,'#')
 
@@ -90,19 +138,8 @@ if __name__ == '__main__':
     root = parser.parse_AST()
     code_file.close()
 
-    '''
-    try:
-        root=parser.parse_AST()
-    except SyntaxError as e:
-        print("Syntax Error")
-        print(e.desc)
-    except LexicalError as e:
-        print("Lexical Error")
-        print(e.desc)
-    else:
-        print_tree(root,0)
-    '''
-    print_tree(root, 0)
+    #print_tree(root, 0)
+    out_tree(root)
 
     visitor=ASTVisitor()
     policies=visitor.visit(root)
@@ -113,4 +150,5 @@ if __name__ == '__main__':
         print(p)
 
     print("Done.")
+    '''
 

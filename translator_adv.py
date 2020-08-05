@@ -714,27 +714,6 @@ class BuiltInFuncs:
 
     @classmethod
     def totaldebit(cls, params, visitor: ASTVisitor):
-        try:
-            cur_table = visitor.symbol_table.resolve("current_table").attr['value']
-        except KeyError:
-            raise Exception("Current table not defined")
-
-        if not params[1]['value'].is_integer():
-            logging.warning(f"TOTALDEBIT: {params[1]['value']} is truncated to {int(params[1]['value'])}")
-
-        channels=[params[0]['value']] if params[0]['type'] == "Channel" else params[0]['value']
-        interval = int(params[1]['value'])
-        daycount = int(params[2]['value'])
-        t_name = visitor.get_new_name(COUNTER_TYPE.PROCEDURE, func_name='totaldebit')
-
-        template = get_template("GROUPBY").set_value("PROJ", f"accountnumber,TOTALDEBIT(accountnumber,{'_'.join(channels)}, {interval}) AS totaldebit") \
-            .set_value("TABLE", cur_table).set_value("KEY", "accountnumber")
-        new_table = visitor.create_view(template, visitor.get_new_name(COUNTER_TYPE.PROCEDURE, func_name='totaldebit'),
-                                        key="accountnumber")
-        return new_table, "totaldebit"
-
-    @classmethod
-    def totaldebit_adv(cls, params, visitor: ASTVisitor):
         channels=[params[0]['value']] if params[0]['type'] == "Channel" else params[0]['value']
         table_name = '_'.join(channels) + "_transfer"
         try:

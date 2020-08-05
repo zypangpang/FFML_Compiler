@@ -1,6 +1,9 @@
-from constants import SYMBOL_TYPE, COUNTER_TYPE, SEQ_TIME, SEQ_UNIT, PREDEFINED_EVENTS, LOG_LEVEL, TIME_UNIT
+import logging
+import re
+
+from constants import SYMBOL_TYPE, COUNTER_TYPE, SEQ_TIME, SEQ_UNIT, PREDEFINED_EVENTS, LOG_LEVEL, TIME_UNIT,GEN_JAVA
 from parser import ASTNode
-from utils import log_print, MyTemplate, bt, ListTemplate, log_info
+from utils import MyTemplate, bt, ListTemplate, log_info
 from functools import reduce
 
 """
@@ -44,7 +47,7 @@ class SymbolCounter:
 
     def inc_counter(self, name):
         if name not in self.__counters:
-            log_print(f"Define new counter <{name}>")
+            logging.info(f"Define new counter <{name}>")
             self.__counters[name] = self.__init_val
         self.__counters[name] += 1
         return self.__counters[name]
@@ -90,7 +93,7 @@ class SymbolTable:
 
     def define(self, sym: Symbol):
         if sym.name in self.symbols:
-            log_print(f"Symbol {sym.name} redefined")
+            logging.info(f"Symbol {sym.name} redefined")
         self.symbols[sym.name] = sym
 
     def resolve(self, name):
@@ -112,8 +115,21 @@ class Policy:
         self.name = name
         self.sql_statements = []
 
+    def __iter__(self):
+        self.i=0
+        self.n=len(self.sql_statements)
+        return self
+
+    def __next__(self):
+        if self.i>= self.n:
+            raise StopIteration
+        t=re.sub("\s+"," ",self.sql_statements[self.i])
+        self.i+=1
+        return t
+
     def add_sql(self, statement):
         self.sql_statements.append(statement)
+
 
     def __str__(self):
         ans = f"<!-- Policy name: {self.name} -->"
@@ -127,7 +143,7 @@ def get_template(name):
     t_map = {
         "SELECT": MyTemplate("SELECT $PROJ$ FROM $TABLE$ WHERE $CONDITION$"),
         "PROJ": MyTemplate("SELECT $PROJ$ FROM $TABLE$"),
-        "CREATE_VIEW": MyTemplate("CREATE VIEW $NAME$ AS ( $BODY$ )"),
+        "CREATE_VIEW": MyTemplate("CREATE TEMPORARY VIEW $NAME$ AS ( $BODY$ )"), #if not GEN_JAVA else MyTemplate('createView("$NAME$","$BODY$");'),
         "UNION_ALL": ListTemplate("UNION ALL"),
         "MATCH": MyTemplate(
             """SELECT $PROJ$ FROM $TABLE$
@@ -143,7 +159,7 @@ MATCH_RECOGNIZE (
 )"""),
         "SELECT_IN": MyTemplate("SELECT $PROJ$ FROM $TABLE$ WHERE $IN_COL$ IN ( $IN_BODY$ )"),
         "GROUPBY": MyTemplate("""SELECT $PROJ$ FROM $TABLE$ GROUP BY $KEY$"""),
-        "WINDOW": MyTemplate("""SELECT $PROJ$,TUMBLE_START(rowtime, INTERVAL $INTERVAL$) AS starttime 
+        "WINDOW": MyTemplate("""SELECT $PROJ$,TUMBLE_END(rowtime, INTERVAL $INTERVAL$) AS rowtime 
 FROM $TABLE$ 
 GROUP BY $KEY$,TUMBLE(rowtime, INTERVAL $INTERVAL$)"""),
         "TOPN": MyTemplate("""SELECT $PROJ$ FROM
@@ -276,10 +292,15 @@ class ASTVisitor:
         except KeyError:
             raise Exception("Current table undefined")
 
-        template = get_template("SELECT_IN").set_value("PROJ", "*").set_value("TABLE", table) \
-            .set_value("IN_COL", key).set_value("IN_BODY", get_template("PROJ")
-                                                .set_value("PROJ", key)
-                                                .set_value("TABLE", t_name).get_code())
+        template= get_template("SELECT").set_value("PROJ",f"{table}.*") \
+                        .set_value("TABLE",f"{t_name},{table}") \
+                        .set_value("CONDITION",f"{t_name}.{key}={table}.{key} AND "
+                                               f"{table}.rowtime >= {t_name}.rowtime") #BETWEEN {t_name}.rowtime AND {t_name}.rowtime + INTERVAL '1' DAY")
+        #template = get_template("SELECT_IN").set_value("PROJ", "*").set_value("TABLE", table) \
+        #    .set_value("IN_COL", key).set_value("IN_BODY", get_template("PROJ")
+        #                                        .set_value("PROJ", key)
+        #                                        .set_value("TABLE", t_name).get_code())
+
         t_name = self.get_new_name(COUNTER_TYPE.CONDITION)
         self.create_view(template, t_name, key='transid')
         return t_name
@@ -343,7 +364,7 @@ class ASTVisitor:
             # process seq time
             seq_time = params['time']
             if not seq_time.is_integer():
-                log_print(f"SEQ: {seq_time} is truncated to {int(seq_time)}", LOG_LEVEL.WARNING)
+                logging.warning(f"SEQ: {seq_time} is truncated to {int(seq_time)}")
                 seq_time = int(seq_time)
             if SEQ_UNIT == TIME_UNIT.HOUR and seq_time >= 24 or seq_time >= 60:
                 raise Exception(
@@ -360,7 +381,7 @@ class ASTVisitor:
                     .set_value("CONDITION", f"channel = '{channel}'")
                 self.create_view(tselect, t_name, key='transid')
                 union_list.append(get_template("PROJ")
-                                  .set_value("PROJ", "accountnumber,rowtime,eventtype")
+                                  .set_value("PROJ", f"accountnumber,rowtime,'{event}' AS eventtype")
                                   .set_value("TABLE", bt(t_name))
                                   .get_code())
 
@@ -437,7 +458,7 @@ class ASTVisitor:
             "event_list": None
         }
         if len(node.children) == 1:
-            log_print(f"No SEQ time specified. Use default {SEQ_TIME} {SEQ_UNIT}", LOG_LEVEL.WARNING)
+            logging.warning(f"No SEQ time specified. Use default {SEQ_TIME} {SEQ_UNIT}")
             res_data['time'] = SEQ_TIME
             res_data['event_list'] = self.visit(node.children[0])
         else:
@@ -476,7 +497,7 @@ class ASTVisitor:
         cond_table, key = self.visit(node.children[1])
         self.symbol_table.resolve("hist_days").attr['value'] = 1
 
-        template = get_template("GROUPBY").set_value("PROJ", f"{key}, COUNT(*) AS daycount") \
+        template = get_template("GROUPBY").set_value("PROJ", f"{key}, COUNT(*) AS daycount, MAX(rowtime) AS rowtime") \
             .set_value("TABLE", cond_table).set_value("KEY", key)
         t_name = self.get_new_name(COUNTER_TYPE.COUNT)
         self.create_view(template, t_name, key=key)
@@ -500,15 +521,23 @@ class ASTVisitor:
     def __cal_comp(self, lhs, comp, rhs):
         if isinstance(lhs, tuple) and isinstance(rhs, tuple):
             key, id_op, join_key = self.__get_key_and_idop(lhs, rhs)
-            template = get_template("JOIN_WHERE").set_value("PROJ", f"{id_op[0]}.{key} AS {key}") \
-                .set_value("LEFT", lhs[0]).set_value("RIGHT", rhs[0]) \
-                .set_value("KEY", join_key).set_value("CONDITION", f"{lhs[0]}.`{lhs[1]}` {comp} {rhs[0]}.`{rhs[1]}`") \
-                .set_value("JOIN_TYPE", "INNOR JOIN")
+            if id_op != rhs:
+                lhs,rhs=rhs,lhs
+            template=get_template("SELECT").set_value("PROJ",f"{id_op[0]}.{key} AS {key}, {id_op[0]}.rowtime AS rowtime ") \
+                                .set_value("TABLE",f"{lhs[0]}, {rhs[0]}") \
+                                .set_value("CONDITION",
+                                           f"{lhs[0]}.{join_key}={rhs[0]}.{join_key} AND {rhs[0]}.rowtime "
+                                           f">= {lhs[0]}.rowtime")
+                                           #f"BETWEEN {lhs[0]}.rowtime AND {lhs[0]}.rowtime + INTERVAL '1' DAY ")
+            #template = get_template("JOIN_WHERE").set_value("PROJ", f"{id_op[0]}.{key} AS {key}") \
+            #    .set_value("LEFT", lhs[0]).set_value("RIGHT", rhs[0]) \
+            #    .set_value("KEY", join_key).set_value("CONDITION", f"{lhs[0]}.`{lhs[1]}` {comp} {rhs[0]}.`{rhs[1]}`") \
+            #    .set_value("JOIN_TYPE", "INNER JOIN")
             t_name = self.get_new_name(COUNTER_TYPE.COMPARISON)
             self.create_view(template, t_name, key=key)
         elif isinstance(lhs, tuple):
             key = self.symbol_table.resolve(lhs[0]).attr['key']
-            template = get_template("SELECT").set_value("PROJ", key).set_value("TABLE", lhs[0]) \
+            template = get_template("SELECT").set_value("PROJ", key+", rowtime").set_value("TABLE", lhs[0]) \
                 .set_value("CONDITION", f"`{lhs[1]}` {comp} {rhs}")
             t_name = self.get_new_name(COUNTER_TYPE.COMPARISON)
             self.create_view(template, t_name, key=key)
@@ -528,7 +557,7 @@ class ASTVisitor:
                                                       f" {op} {right[0]}.`{right[1]}` AS `result`") \
                 .set_value("LEFT", left[0]).set_value("RIGHT", right[0]) \
                 .set_value("KEY", join_key) \
-                .set_value("JOIN_TYPE", "INNOR JOIN")
+                .set_value("JOIN_TYPE", "INNER JOIN")
             t_name = self.get_new_name(COUNTER_TYPE.MATH)
             self.create_view(template, t_name, key=key)
             return t_name, 'result'
@@ -635,7 +664,7 @@ class BuiltInFuncs:
         except KeyError:
             daycount = 1
         if len(params) == 1:
-            params.append({'type': 'Digits', 'value': 1})
+            params.append({'type': 'Digits', 'value': 1.0})
         if len(params) == 2:
             params.append({'type': 'Int', 'value': daycount})
         if not cls.verify_params("totaldebit", params):
@@ -684,28 +713,43 @@ class BuiltInFuncs:
         cls.__insert_table('block', params, visitor)
 
     @classmethod
-    def totaldebit(cls, params, visitor: ASTVisitor):
-        if params[0]['type'] == "Channel":
-            channel = params[0]['value']
-            table_name = f"{channel}_transfer"
-            try:
-                visitor.symbol_table.resolve(table_name)
-            except KeyError:
-                t = get_template("SELECT").set_value("PROJ", "*").set_value("TABLE", "transfer") \
-                    .set_value("CONDITION", f"channel='{channel}'")
-                visitor.create_view(t, table_name, key='transid')
-        else:
-            table_name = '_'.join(params[0]['value']) + "_transfer"
-            try:
-                visitor.symbol_table.resolve(table_name)
-            except KeyError:
-                condition_str = " OR ".join([f"channel='{c}'" for c in params[0]['value']])
-                t = get_template("SELECT").set_value("PROJ", "*").set_value("TABLE", "transfer") \
-                    .set_value("CONDITION", condition_str)
-                visitor.create_view(t, table_name, key='transid')
+    def totaldebit_try(cls, params, visitor: ASTVisitor):
+        channels = [params[0]['value']] if params[0]['type'] == "Channel" else params[0]['value']
+        table_name = '_'.join(channels) + "_transfer"
+        try:
+            visitor.symbol_table.resolve(table_name)
+        except KeyError:
+            condition_str = " OR ".join([f"channel='{c}'" for c in channels])
+            t = get_template("SELECT").set_value("PROJ", "*").set_value("TABLE", "transfer") \
+                .set_value("CONDITION", condition_str)
+            visitor.create_view(t, table_name, key='transid')
 
         if not params[1]['value'].is_integer():
-            log_print(f"TOTALDEBIT: {params[1]['value']} is truncated to {int(params[1]['value'])}", LOG_LEVEL.WARNING)
+            logging.warning(f"TOTALDEBIT: {params[1]['value']} is truncated to {int(params[1]['value'])}")
+        interval = int(params[1]['value'])
+        daycount = int(params[2]['value'])
+        t_name = visitor.get_new_name(COUNTER_TYPE.PROCEDURE, func_name='totaldebit')
+
+        template = get_template("GROUPBY").set_value("PROJ", f"accountnumber,TOTALDEBIT(accountnumber,{interval}) AS totaldebit") \
+            .set_value("TABLE", table_name).set_value("KEY", "accountnumber")
+        new_table = visitor.create_view(template, visitor.get_new_name(COUNTER_TYPE.PROCEDURE, func_name='totaldebit'),
+                                        key="accountnumber")
+        return new_table, "totaldebit"
+
+    @classmethod
+    def totaldebit(cls, params, visitor: ASTVisitor):
+        channels=[params[0]['value']] if params[0]['type'] == "Channel" else params[0]['value']
+        table_name = '_'.join(channels) + "_transfer"
+        try:
+            visitor.symbol_table.resolve(table_name)
+        except KeyError:
+            condition_str = " OR ".join([f"channel='{c}'" for c in channels])
+            t = get_template("SELECT").set_value("PROJ", "*").set_value("TABLE", "transfer") \
+                .set_value("CONDITION", condition_str)
+            visitor.create_view(t, table_name, key='transid')
+
+        if not params[1]['value'].is_integer():
+            logging.warning(f"TOTALDEBIT: {params[1]['value']} is truncated to {int(params[1]['value'])}")
         interval = int(params[1]['value'])
         daycount = int(params[2]['value'])
         t_name = visitor.get_new_name(COUNTER_TYPE.PROCEDURE, func_name='totaldebit')
@@ -714,9 +758,12 @@ class BuiltInFuncs:
             .set_value("KEY", "accountnumber") \
             .set_value("INTERVAL", f"'{interval}' DAY")
         visitor.create_view(template, t_name, key='accountnumber')
-        template = get_template("TOPN").set_value("PROJ", "accountnumber, totaldebit") \
+        #template=get_template("SELECT").set_value("PROJ", "accountnumber, totaldebit, rowtime")\
+        #                .set_value("TABLE",t_name)\
+        #                .set_value("CONDITION",f"rowtime >= CURRENT_TIMESTAMP - INTERVAL '{daycount}' DAY")
+        template = get_template("TOPN").set_value("PROJ", "accountnumber, totaldebit, rowtime") \
             .set_value("KEY", "accountnumber") \
-            .set_value("ORDER", "starttime") \
+            .set_value("ORDER", "rowtime") \
             .set_value("TABLE", t_name) \
             .set_value("CONDITION", f'<= {daycount}')
         t_name = visitor.get_new_name(COUNTER_TYPE.PROCEDURE, func_name='totaldebit')

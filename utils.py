@@ -1,4 +1,4 @@
-from constants import TERM_BEGIN_CHARS, ELE_TYPE,LOG_LEVEL,DEBUG
+from constants import TERM_BEGIN_CHARS, ELE_TYPE,LOG_LEVEL,DEBUG,LOG_FILE
 import re,sys
 
 class SyntaxError(Exception):
@@ -54,6 +54,7 @@ def format_print(func, title, table=False):
 
     return inner_func
 
+'''
 def log_print(content,level=LOG_LEVEL.INFO):
     #level_str={
     #    LOG_LEVEL.INFO:"info",
@@ -61,11 +62,17 @@ def log_print(content,level=LOG_LEVEL.INFO):
     #    LOG_LEVEL.ERROR: "ERROR",
     #}
     #level_s=level_str[level]
+    if DEBUG:
+        print(f">>> {level.name.upper()}: {content}")
+    else:
+        with open
+
     if not DEBUG:
         if level == LOG_LEVEL.INFO:
             return
 
     print(f">>> {level.name.upper()}: {content}")
+'''
 
 
 def print_dict(my_dict, key_order=None):

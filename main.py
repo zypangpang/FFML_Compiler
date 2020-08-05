@@ -1,4 +1,8 @@
-import sys,fire
+import sys,fire,logging.config
+
+from log_config import logging_config
+logging.config.dictConfig(logging_config)
+
 from utils import out_tree,SyntaxError,LexicalError
 from grammar_related import get_grammar_from_file, left_factoring, get_production_map,get_all_terms,get_all_productions
 from first_follow_set import FirstFollowSet
@@ -62,7 +66,18 @@ def read_parse_table(file_path,endmark):
     return M
 
 class Main:
-    def parse(self, in_file=None, ast=False, output=False, out_file=None):
+    """
+    FFML parser and translator.
+    """
+    def parse(self, in_file=None, ast:bool=False, output:bool=False, out_file=None):
+        '''
+        Parse input from in_file or stdin
+        :param in_file: input code file path. If None, read from stdin.
+        :param ast: bool. output ast or syntax tree.
+        :param output: bool. output or only check grammar.
+        :param out_file: output file path. If None, output to stdout.
+        :return:
+        '''
         try:
             self.__parse(in_file,ast,output,out_file)
         except SyntaxError as e:
@@ -94,7 +109,13 @@ class Main:
         return root
 
 
-    def translate(self,in_file=None,out_file=None):
+    def translate(self,in_file=None,out_file=None, readable=False):
+        '''
+        Translate input codes to Flink SQL or Flink Java.
+        :param in_file: Input code file path. If None, read stdin.
+        :param out_file: Output file path. If None, write to stdout.
+        :return:
+        '''
         try:
             root=self.__parse(in_file, ast=True,out_file=None,output=False)
         except SyntaxError as e:
@@ -110,45 +131,17 @@ class Main:
         visitor = ASTVisitor()
         policies = visitor.visit(root)
         policy_num = len(policies)
-        print(f"Generated {policy_num} {'policies' if policy_num > 1 else 'policy'}.")
+        logging.info(f"Generated {policy_num} {'policies' if policy_num > 1 else 'policy'}.")
 
         file=bool(out_file)
         out_file=open(out_file,'w') if out_file else sys.stdout
         for p in policies:
-            out_file.write(str(p))
+            if readable:
+                out_file.write(str(p))
+            else:
+                out_file.writelines(s+'\n' for s in p)
         if file: out_file.close()
 
 if __name__ == '__main__':
+    logging.info("FFML translator started.")
     fire.Fire(Main)
-    '''
-    path = "texts/grammar_LL1.txt" if len(sys.argv) <= 1 else sys.argv[1]
-    M_path="texts/LL1_table.txt"
-    start_symbol, grammar = get_grammar_from_file('BNF', path, '|', ';')
-
-    parse_table=read_parse_table(M_path,'#')
-
-    dfa_path = 'lexer/dfa.txt'
-    code_path = 'test_code.txt'
-    preprocessor=Preprocessor(code_path)
-    new_code_path=preprocessor.process()
-    code_file = open(new_code_path, 'r')
-
-    lexer = Lexer(code_file, get_dfa_from_file(dfa_path), get_symbol_table())
-    parser=Parser(grammar,parse_table,start_symbol,lexer)
-    root = parser.parse_AST()
-    code_file.close()
-
-    #print_tree(root, 0)
-    out_tree(root)
-
-    visitor=ASTVisitor()
-    policies=visitor.visit(root)
-    policy_num=len(policies)
-    print(f"Generated {policy_num} {'policies' if policy_num > 1 else 'policy'}.")
-    #print(visitor.symbol_table)
-    for p in policies:
-        print(p)
-
-    print("Done.")
-    '''
-

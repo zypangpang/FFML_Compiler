@@ -1,6 +1,5 @@
 import string
 from collections import defaultdict
-#from global_var import global_symbol_table
 from constants import  ENDMARK,BUFFER_SIZE,KEYWORDS
 from utils import LexicalError
 def get_symbol_table():

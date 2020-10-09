@@ -48,6 +48,7 @@ def output_parse_table(M,endmark):
         for a,b in M[x].items():
             print(f"    {a} {b}")
         print(endmark)
+
 def read_parse_table(file_path,endmark):
     M = {}
     strip_chars = '\n\t '

@@ -1,7 +1,7 @@
 import logging
 import re
 
-from constants import SYMBOL_TYPE, COUNTER_TYPE, SEQ_TIME, SEQ_UNIT, PREDEFINED_EVENTS, LOG_LEVEL, TIME_UNIT,GEN_JAVA
+from constants import SYMBOL_TYPE, COUNTER_TYPE, SEQ_TIME, SEQ_UNIT, PREDEFINED_EVENTS, LOG_LEVEL, TIME_UNIT,GEN_JAVA,COMMON_KEYS
 from parser import ASTNode
 from utils import MyTemplate, bt, ListTemplate, log_info
 from functools import reduce
@@ -164,7 +164,7 @@ FROM $TABLE$
 GROUP BY $KEY$,TUMBLE(rowtime, INTERVAL $INTERVAL$)"""),
         "TOPN": MyTemplate("""SELECT $PROJ$ FROM
 (
-   SELECT $PROJ$,
+   SELECT *,
    ROW_NUMBER() OVER(PARTITION BY $KEY$ ORDER BY $ORDER$ DESC) as rownum
    FROM $TABLE$
 )
@@ -199,12 +199,12 @@ class ASTVisitor:
     def __update_current_table(self, table):
         self.symbol_table.define(Symbol("current_table", SYMBOL_TYPE.INTERNAL, {'value': table}))
 
-    def create_view(self, sql_template, t_name, **kwargs):
+    def create_view(self, sql_template, t_name, key, **kwargs):
         template_view = get_template("CREATE_VIEW") \
             .set_value("NAME", bt(t_name)) \
             .set_value("BODY", sql_template.get_code())
         self.add_policy_sql(template_view)
-        self.symbol_table.define(Symbol(t_name, SYMBOL_TYPE.TABLE, {'q': sql_template.get_code(), **kwargs}))
+        self.symbol_table.define(Symbol(t_name, SYMBOL_TYPE.TABLE, {'q': sql_template.get_code(),'key':key, **kwargs}))
         return t_name
 
     def add_policy_sql(self, template):
@@ -263,15 +263,19 @@ class ASTVisitor:
         i = 1
         while i < len(node.children):
             op = self.visit(node.children[i])
-            cur_table = stack.pop()
             if op == "AND":
+                cur_table = stack.pop()
                 self.__update_current_table(cur_table)
             else:
                 event_table = self.symbol_table.resolve("event_table").attr['value']
                 self.__update_current_table(event_table)
             stack.append(self.visit(node.children[i + 1]))
             i += 2
-        t_name = stack.pop()
+        condition_sqls = [
+            get_template("PROJ").set_value("PROJ", "*").set_value("TABLE", ctable) for ctable in stack
+        ]
+        template_union = get_template("UNION_ALL").set_list(condition_sqls)
+        t_name = self.create_view(template_union, "condition_union", key='id')
         self.symbol_table.define(Symbol("condition_table", SYMBOL_TYPE.INTERNAL, {"type": "str", "value": t_name}))
 
     def visit_And(self, node):
@@ -279,6 +283,24 @@ class ASTVisitor:
 
     def visit_Or(self, node):
         return "OR"
+
+    def cast_rowtime(self,table,cols:list=()):
+        t_name = self.get_new_name(COUNTER_TYPE.CAST)
+
+        cur_table_key = self.symbol_table.resolve(table).attr['key']
+        cols_str=''
+        if cols:
+            try:
+                cols.remove(cur_table_key)
+            except:
+                pass
+            cols_str=",".join(cols)
+        cast_table_t = get_template("PROJ")\
+            .set_value("PROJ", f"{cur_table_key},{cols_str+',' if cols_str else ''} CAST(rowtime AS TIMESTAMP(3)) AS rowtime") \
+            .set_value("TABLE", table)
+
+        self.create_view(cast_table_t, t_name, key=cur_table_key)
+        return t_name
 
     # @log_info
     def visit_SingleCondition(self, node: ASTNode):
@@ -289,20 +311,26 @@ class ASTVisitor:
 
         try:
             table = self.symbol_table.resolve("current_table").attr['value']
+            cur_table_key=self.symbol_table.resolve(table).attr['key']
         except KeyError:
-            raise Exception("Current table undefined")
+            raise Exception("Current table undefined or get key failed")
+        cur_table_cast=self.cast_rowtime(table,[key])
+        cond_table_cast=self.cast_rowtime(t_name)
 
-        template= get_template("SELECT").set_value("PROJ",f"{table}.*") \
-                        .set_value("TABLE",f"{t_name},{table}") \
-                        .set_value("CONDITION",f"{t_name}.{key}={table}.{key} AND "
-                                               f"{table}.rowtime >= {t_name}.rowtime") #BETWEEN {t_name}.rowtime AND {t_name}.rowtime + INTERVAL '1' DAY")
-        #template = get_template("SELECT_IN").set_value("PROJ", "*").set_value("TABLE", table) \
-        #    .set_value("IN_COL", key).set_value("IN_BODY", get_template("PROJ")
-        #                                        .set_value("PROJ", key)
-        #                                        .set_value("TABLE", t_name).get_code())
+        template= get_template("SELECT").set_value("PROJ",f"{cur_table_cast}.*") \
+                        .set_value("TABLE",f"{cond_table_cast},{cur_table_cast}") \
+                        .set_value("CONDITION",f"{cond_table_cast}.{key}={cur_table_cast}.{key} AND "
+                                               f"{cur_table_cast}.rowtime >= {cond_table_cast}.rowtime") #BETWEEN {t_name}.rowtime AND {t_name}.rowtime + INTERVAL '1' DAY")
 
         t_name = self.get_new_name(COUNTER_TYPE.CONDITION)
-        self.create_view(template, t_name, key='transid')
+        self.create_view(template, t_name, key=cur_table_key)
+
+        template = get_template("SELECT_IN").set_value("PROJ", "*").set_value("TABLE", table) \
+           .set_value("IN_COL", cur_table_key).set_value("IN_BODY", get_template("PROJ")
+                                               .set_value("PROJ", cur_table_key)
+                                               .set_value("TABLE", t_name).get_code())
+        t_name=self.get_new_name(COUNTER_TYPE.CONDITION)
+        self.create_view(template,t_name,key=cur_table_key)
         return t_name
 
     def visit_Condition(self, node):
@@ -332,7 +360,7 @@ class ASTVisitor:
                           .set_value("TABLE", et)
                           .get_code() for et in event_tables]
         template_union = get_template("UNION_ALL").set_list(event_sqls)
-        event_table = self.create_view(template_union, self.get_new_name(COUNTER_TYPE.EVENT), key='transid')
+        event_table = self.create_view(template_union, self.get_new_name(COUNTER_TYPE.EVENT), key='id')
         self.symbol_table.define(Symbol("event_table", SYMBOL_TYPE.INTERNAL, {'type': 'str', 'value': event_table}))
         self.__update_current_table(event_table)
 
@@ -358,7 +386,7 @@ class ASTVisitor:
             #            self.policy.add_sql(sql)
             #            self.symbol_table.define(Symbol(t_name,SYMBOL_TYPE.TABLE,{'q':template_select.get_code()}))
             t_name = self.get_new_name(COUNTER_TYPE.EVENT)
-            self.create_view(template_select, t_name, key='transid')
+            self.create_view(template_select, t_name, key='id')
             final_event_table = t_name
         else:
             # process seq time
@@ -379,9 +407,9 @@ class ASTVisitor:
                     .set_value("PROJ", "*") \
                     .set_value("TABLE", bt(event)) \
                     .set_value("CONDITION", f"channel = '{channel}'")
-                self.create_view(tselect, t_name, key='transid')
+                self.create_view(tselect, t_name, key='id')
                 union_list.append(get_template("PROJ")
-                                  .set_value("PROJ", f"accountnumber,rowtime,'{event}' AS eventtype")
+                                  .set_value("PROJ", f"accountnumber,rowtime,eventtype")
                                   .set_value("TABLE", bt(t_name))
                                   .get_code())
 
@@ -389,7 +417,7 @@ class ASTVisitor:
             # t_id = self.counters.inc_counter(COMMON_COUNTER['event'])
             # t_name = f"event_{t_id}"
             t_name = self.get_new_name(COUNTER_TYPE.EVENT)
-            self.create_view(union_smt, t_name, key='transid')
+            self.create_view(union_smt, t_name, key='id')
 
             bt_event_seq = bt(event_seq)
             match_template = get_template("MATCH") \
@@ -413,7 +441,7 @@ class ASTVisitor:
                 .set_value("IN_BODY", get_template("PROJ").set_value("PROJ", "accountnumber")
                            .set_value("TABLE", t_name).get_code())
             t_name = self.get_new_name(COUNTER_TYPE.EVENT)
-            self.create_view(in_template, t_name, key='transid')
+            self.create_view(in_template, t_name, key='id')
 
             final_event_table = t_name
 
@@ -430,7 +458,7 @@ class ASTVisitor:
         if ori_event_name not in PREDEFINED_EVENTS:
             raise Exception("Event not supported")
         try:
-            self.symbol_table.define(Symbol(ori_event_name, SYMBOL_TYPE.EVENT, {'key': "transid"}))
+            self.symbol_table.define(Symbol(ori_event_name, SYMBOL_TYPE.EVENT, {'key': "id"}))
         except Exception as e:
             pass
         return ori_event_name
@@ -510,12 +538,12 @@ class ASTVisitor:
         left_key = self.symbol_table.resolve(lhs[0]).attr['key']
         right_key = self.symbol_table.resolve(rhs[0]).attr['key']
 
-        key = 'transid' if left_key == 'transid' or right_key == 'transid' else 'accountnumber'
-        id_op = lhs if left_key == 'transid' else rhs  # the operand with the 'key'
+        key = 'id' if left_key == 'id' or right_key == 'id' else 'accountnumber'
+        id_op = lhs if left_key == 'id' else rhs  # the operand with the 'key'
 
         join_key = 'accountnumber'
-        if left_key == 'transid' and right_key == 'transid':
-            join_key = 'transid'
+        if left_key == 'id' and right_key == 'id':
+            join_key = 'id'
         return key, id_op, join_key
 
     def __cal_comp(self, lhs, comp, rhs):
@@ -550,7 +578,7 @@ class ASTVisitor:
         if isinstance(left, float) and isinstance(right, float):
             return self.__math_cal(left, op, right)
         if isinstance(left, tuple) and isinstance(right, tuple):
-            # id_operator = left if self.symbol_table.resolve(left[0]).attr['key'] == 'transid' else right
+            # id_operator = left if self.symbol_table.resolve(left[0]).attr['key'] == 'id' else right
             key, id_op, join_key = self.__get_key_and_idop(left, right)
             template = get_template("JOIN").set_value("PROJ",
                                                       f"{id_op[0]}.{key} AS {key}, {left[0]}.`{left[1]}`"
@@ -681,13 +709,13 @@ class BuiltInFuncs:
     @classmethod
     def params_alert(cls, params, visitor):
         if not cls.verify_params("alert", params):
-            raise Exception("ALERT requires 2 parameters: Event.transid, Event.accountnumber")
+            raise Exception("ALERT requires 2 parameters: Event.id, Event.accountnumber")
         return params
 
     @classmethod
     def params_block(cls, params, visitor):
         if not cls.verify_params("block", params):
-            raise Exception("BLOCK requires 2 parameters: Event.transid, Event.accountnumber")
+            raise Exception("BLOCK requires 2 parameters: Event.id, Event.accountnumber")
         return params
 
     # Procedure for each builtin function
@@ -722,7 +750,7 @@ class BuiltInFuncs:
             condition_str = " OR ".join([f"channel='{c}'" for c in channels])
             t = get_template("SELECT").set_value("PROJ", "*").set_value("TABLE", "transfer") \
                 .set_value("CONDITION", condition_str)
-            visitor.create_view(t, table_name, key='transid')
+            visitor.create_view(t, table_name, key='id')
 
         if not params[1]['value'].is_integer():
             logging.warning(f"TOTALDEBIT: {params[1]['value']} is truncated to {int(params[1]['value'])}")

@@ -39,6 +39,7 @@ class COUNTER_TYPE(Enum):
     PROCEDURE=4
     MATH=5
     COUNT=6
+    CAST=7
 
 class TIME_UNIT(Enum):
     SECOND=0
@@ -77,5 +78,6 @@ PREDEFINED_EVENTS={
     "login"
 }
 
+COMMON_KEYS=['id','accountnumber']
 
 

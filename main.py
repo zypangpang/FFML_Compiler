@@ -10,7 +10,8 @@ from constants import EMPTY
 from lexer import Lexer,get_symbol_table,get_dfa_from_file
 from parser import  Parser
 from preprocess import Preprocessor
-from translator import ASTVisitor
+#from translator import ASTVisitor
+from translator_adv import ASTVisitor
 
 
 def check_nullable(ff: FirstFollowSet):

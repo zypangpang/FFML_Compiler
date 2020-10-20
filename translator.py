@@ -263,15 +263,19 @@ class ASTVisitor:
         i = 1
         while i < len(node.children):
             op = self.visit(node.children[i])
-            cur_table = stack.pop()
             if op == "AND":
+                cur_table = stack.pop()
                 self.__update_current_table(cur_table)
             else:
                 event_table = self.symbol_table.resolve("event_table").attr['value']
                 self.__update_current_table(event_table)
             stack.append(self.visit(node.children[i + 1]))
             i += 2
-        t_name = stack.pop()
+        condition_sqls=[
+            get_template("PROJ").set_value("PROJ","*").set_value("TABLE",ctable) for ctable in stack
+        ]
+        template_union = get_template("UNION_ALL").set_list(condition_sqls)
+        t_name = self.create_view(template_union, "condition_union", key='id')
         self.symbol_table.define(Symbol("condition_table", SYMBOL_TYPE.INTERNAL, {"type": "str", "value": t_name}))
 
     def visit_And(self, node):
@@ -728,7 +732,7 @@ class BuiltInFuncs:
         interval = int(params[1]['value'])
         daycount = int(params[2]['value'])
 
-        template=get_template("PROJ").set_value("PROJ","S.*,T.v as totaldebit") \
+        template=get_template("PROJ").set_value("PROJ","S.id,T.v as totaldebit") \
             .set_value("TABLE",f"{cur_table} as S, LATERAL TABLE(TOTALDEBIT(accountnumber,"
                                f"'{','.join(channels)}',{interval},{daycount})) as T(v)")
 
@@ -736,7 +740,7 @@ class BuiltInFuncs:
         #template = get_template("PROJ").set_value("PROJ", f"*,TOTALDEBIT(accountnumber,{'_'.join(channels)}, {interval}) AS totaldebit") \
         #    .set_value("TABLE", cur_table)#.set_value("KEY", "accountnumber")
         new_table = visitor.create_view(template, visitor.get_new_name(COUNTER_TYPE.PROCEDURE, func_name='totaldebit'),
-                                        key="accountnumber")
+                                        key="id")
         return new_table, "totaldebit"
 
     @classmethod

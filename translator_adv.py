@@ -393,7 +393,7 @@ class ASTVisitor:
             seq_time = params['time']
             if not seq_time.is_integer():
                 logging.warning(f"SEQ: {seq_time} is truncated to {int(seq_time)}")
-                seq_time = int(seq_time)
+            seq_time = int(seq_time)
             if SEQ_UNIT == TIME_UNIT.HOUR and seq_time >= 24 or seq_time >= 60:
                 raise Exception(
                     f"Change SEQ time {seq_time} {SEQ_UNIT.name} to some {TIME_UNIT(SEQ_UNIT.value + 1).name}")
@@ -409,7 +409,7 @@ class ASTVisitor:
                     .set_value("CONDITION", f"channel = '{channel}'")
                 self.create_view(tselect, t_name, key='id')
                 union_list.append(get_template("PROJ")
-                                  .set_value("PROJ", f"accountnumber,rowtime,eventtype")
+                                  .set_value("PROJ", f"id,accountnumber,rowtime,eventtype")
                                   .set_value("TABLE", bt(t_name))
                                   .get_code())
 
@@ -425,20 +425,20 @@ class ASTVisitor:
                 .set_value("TABLE", t_name) \
                 .set_value("PARTITION", "accountnumber") \
                 .set_value("ORDER", "rowtime") \
-                .set_value("MEASURES", f"{event_seq[-1]}.rowtime AS rowtime") \
+                .set_value("MEASURES", f"{event_seq[-1]}.id as id,{event_seq[-1]}.rowtime AS rowtime") \
                 .set_value("PATTERN", " ".join(event_seq)) \
                 .set_value("TIME_VAL", str(seq_time)) \
                 .set_value("TIME_UNIT", SEQ_UNIT.name) \
-                .set_value("DEFINE", ','.join([f"{item} AS {item}.eventtype='{item}'"
+                .set_value("DEFINE", ','.join([f"{item} AS eventtype='{item}'"
                                                for item in event_seq]))
             t_name = self.get_new_name(COUNTER_TYPE.EVENT)
-            self.create_view(match_template, t_name, key='accountnumber')
+            self.create_view(match_template, t_name, key='id')
 
             in_template = get_template("SELECT_IN") \
                 .set_value("PROJ", "*") \
                 .set_value("TABLE", f"{channel}_{event_seq[-1]}") \
-                .set_value("IN_COL", "accountnumber") \
-                .set_value("IN_BODY", get_template("PROJ").set_value("PROJ", "accountnumber")
+                .set_value("IN_COL", "id") \
+                .set_value("IN_BODY", get_template("PROJ").set_value("PROJ", "id")
                            .set_value("TABLE", t_name).get_code())
             t_name = self.get_new_name(COUNTER_TYPE.EVENT)
             self.create_view(in_template, t_name, key='id')

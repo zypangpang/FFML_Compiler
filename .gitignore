@@ -1,0 +1,6 @@
+*.txt
+*.log
+*.tmp
+.idea/
+*.sql
+*pycache*

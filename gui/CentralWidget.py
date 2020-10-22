@@ -8,3 +8,4 @@ class CentralWidget(QtWidgets.QWidget):
         super().__init__()
         self.ui = Ui_CentralWidget()
         self.ui.setupUi(self)
+        self.ui.msgEdit.setReadOnly(True)

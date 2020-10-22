@@ -1,6 +1,7 @@
 from enum import Enum
 
 DEBUG=True
+GUI=[False]
 GEN_JAVA=False
 LOG_FILE='./translator.log'
 #class EBNF_OP(Enum):

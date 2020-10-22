@@ -1,0 +1,8 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+    <file>images/build.png</file>
+    <file>images/build1.png</file>
+    <file>images/build2.png</file>
+    <file>images/parse.png</file>
+</qresource>
+</RCC>

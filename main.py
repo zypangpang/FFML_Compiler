@@ -3,7 +3,7 @@ import sys,fire,logging.config
 from log_config import logging_config
 logging.config.dictConfig(logging_config)
 
-from utils import out_tree,SyntaxError,LexicalError
+from utils import out_tree,SyntaxError,LexicalError,log_collect
 from grammar_related import get_grammar_from_file, left_factoring, get_production_map,get_all_terms,get_all_productions
 from first_follow_set import FirstFollowSet
 from constants import EMPTY
@@ -80,15 +80,17 @@ class Main:
         :param out_file: output file path. If None, output to stdout.
         :return:
         '''
+        error=None
         try:
             self.__parse(in_file,ast,output,out_file)
-        except SyntaxError as e:
-            print(e)
-        except LexicalError as e:
-            print(e)
-        except:
-            print("Unexpected error.")
-            raise
+        except Exception as e:
+            error=e
+
+        if error:
+            log_collect(str(error), "error")
+            print(error)
+            return False
+        return True
 
 
     def __parse(self, in_file, ast, output, out_file):
@@ -118,17 +120,16 @@ class Main:
         :param out_file: Output file path. If None, write to stdout.
         :return:
         '''
+        error=None
         try:
             root=self.__parse(in_file, ast=True,out_file=None,output=False)
-        except SyntaxError as e:
-            print(e)
-            return
-        except LexicalError as e:
-            print(e)
-            return
-        except:
-            print("Unexpected error.")
-            raise
+        except Exception as e:
+            error=e
+
+        if error:
+            log_collect(str(error), "error")
+            print(error)
+            return False
 
         visitor = ASTVisitor()
         policies = visitor.visit(root)
@@ -143,6 +144,7 @@ class Main:
             else:
                 out_file.writelines(s+'\n' for s in p)
         if file: out_file.close()
+        return True
 
 if __name__ == '__main__':
     logging.info("FFML translator started.")

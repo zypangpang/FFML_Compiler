@@ -3,7 +3,7 @@ import re
 
 from constants import SYMBOL_TYPE, COUNTER_TYPE, SEQ_TIME, SEQ_UNIT, PREDEFINED_EVENTS, LOG_LEVEL, TIME_UNIT,GEN_JAVA
 from parser import ASTNode
-from utils import MyTemplate, bt, ListTemplate, log_info
+from utils import MyTemplate, bt, ListTemplate, log_info,log_collect
 from functools import reduce
 
 """
@@ -47,7 +47,8 @@ class SymbolCounter:
 
     def inc_counter(self, name):
         if name not in self.__counters:
-            logging.info(f"Define new counter <{name}>")
+            log_collect(f"Define new counter <{name}>",'info')
+            #logging.info(f"Define new counter <{name}>")
             self.__counters[name] = self.__init_val
         self.__counters[name] += 1
         return self.__counters[name]
@@ -93,7 +94,8 @@ class SymbolTable:
 
     def define(self, sym: Symbol):
         if sym.name in self.symbols:
-            logging.info(f"Symbol {sym.name} redefined")
+            log_collect(f"Symbol {sym.name} redefined","info")
+            #logging.info(f"Symbol {sym.name} redefined")
         self.symbols[sym.name] = sym
 
     def resolve(self, name):
@@ -368,7 +370,8 @@ class ASTVisitor:
             # process seq time
             seq_time = params['time']
             if not seq_time.is_integer():
-                logging.warning(f"SEQ: {seq_time} is truncated to {int(seq_time)}")
+                log_collect(f"SEQ: {seq_time} is truncated to {int(seq_time)}",'warning')
+                #logging.warning(f"SEQ: {seq_time} is truncated to {int(seq_time)}")
             seq_time = int(seq_time)
             if SEQ_UNIT == TIME_UNIT.HOUR and seq_time >= 24 or seq_time >= 60:
                 raise Exception(
@@ -462,7 +465,8 @@ class ASTVisitor:
             "event_list": None
         }
         if len(node.children) == 1:
-            logging.warning(f"No SEQ time specified. Use default {SEQ_TIME} {SEQ_UNIT}")
+            log_collect(f"No SEQ time specified. Use default {SEQ_TIME} {SEQ_UNIT}",'warning')
+            #logging.warning(f"No SEQ time specified. Use default {SEQ_TIME} {SEQ_UNIT}")
             res_data['time'] = SEQ_TIME
             res_data['event_list'] = self.visit(node.children[0])
         else:
@@ -726,7 +730,8 @@ class BuiltInFuncs:
             raise Exception("Current table not defined")
 
         if not params[1]['value'].is_integer():
-            logging.warning(f"TOTALDEBIT: {params[1]['value']} is truncated to {int(params[1]['value'])}")
+            log_collect(f"TOTALDEBIT: {params[1]['value']} is truncated to {int(params[1]['value'])}",'warning')
+            #logging.warning(f"TOTALDEBIT: {params[1]['value']} is truncated to {int(params[1]['value'])}")
 
         channels=[params[0]['value']] if params[0]['type'] == "Channel" else params[0]['value']
         interval = int(params[1]['value'])
@@ -756,7 +761,8 @@ class BuiltInFuncs:
             visitor.create_view(t, table_name, key='id')
 
         if not params[1]['value'].is_integer():
-            logging.warning(f"TOTALDEBIT: {params[1]['value']} is truncated to {int(params[1]['value'])}")
+            log_collect(f"TOTALDEBIT: {params[1]['value']} is truncated to {int(params[1]['value'])}","warning")
+            #logging.warning(f"TOTALDEBIT: {params[1]['value']} is truncated to {int(params[1]['value'])}")
         interval = int(params[1]['value'])
         daycount = int(params[2]['value'])
         t_name = visitor.get_new_name(COUNTER_TYPE.PROCEDURE, func_name='totaldebit')

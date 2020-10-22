@@ -1,5 +1,6 @@
-from constants import TERM_BEGIN_CHARS, ELE_TYPE,LOG_LEVEL,DEBUG,LOG_FILE
-import re,sys
+from constants import TERM_BEGIN_CHARS, ELE_TYPE,LOG_LEVEL,DEBUG,LOG_FILE,GUI
+import re,sys,logging
+from gui.utils import add_log
 
 class SyntaxError(Exception):
     def __init__(self,type,desc):
@@ -73,6 +74,11 @@ def log_print(content,level=LOG_LEVEL.INFO):
 
     print(f">>> {level.name.upper()}: {content}")
 '''
+
+def log_collect(content,level='warning'):
+    if GUI[0]:
+        add_log(content,level)
+    getattr(logging,level)(content)
 
 
 def print_dict(my_dict, key_order=None):

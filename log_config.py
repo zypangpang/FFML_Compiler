@@ -1,5 +1,10 @@
-from constants import DEBUG
-log_file="./translator.log"
+from constants import DEBUG,LOG_FILE
+try:
+    from gui.gui_constant import configs
+    log_file=configs.get_compiler_value(configs.LOG_FILE_PATH)
+except:
+    log_file=LOG_FILE
+
 logging_config={
     'version': 1,
     'formatters':{

@@ -1,6 +1,7 @@
-from constants import TERM_BEGIN_CHARS, ELE_TYPE,LOG_LEVEL,DEBUG,LOG_FILE,GUI
+from constants import TERM_BEGIN_CHARS, ELE_TYPE,LOG_LEVEL,DEBUG,GUI,translator_configs
 import re,sys,logging
 from gui.utils import add_log
+
 
 class SyntaxError(Exception):
     def __init__(self,type,desc):

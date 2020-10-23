@@ -28,6 +28,9 @@
        <verstretch>3</verstretch>
       </sizepolicy>
      </property>
+     <property name="placeholderText">
+      <string>Type here to input FFML policies</string>
+     </property>
     </widget>
    </item>
    <item>
@@ -43,6 +46,9 @@
        <width>16777215</width>
        <height>16777215</height>
       </size>
+     </property>
+     <property name="placeholderText">
+      <string>Here show compiler messages</string>
      </property>
     </widget>
    </item>

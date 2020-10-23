@@ -1,13 +1,15 @@
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QKeySequence, QIcon, QTextDocument
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QSizePolicy, QVBoxLayout
+from PyQt5.QtCore import Qt, QUrl
+from PyQt5.QtWidgets import QSizePolicy, QVBoxLayout, QFileDialog
 import gui.resources_gen.qtresource
 
 from constants import GUI
-import gui.gui_constant as constant
+import gui.gui_constant as gconstant
 from gui.CentralWidget import CentralWidget
-from gui.utils import clear_log,get_log_list
+from gui.SettingDialog import SettingDialog
+from gui.utils import clear_log,get_log_list,choose_file
+import constants
 
 from main import Main
 
@@ -17,11 +19,26 @@ class MainWindow(QtWidgets.QMainWindow):
         super().__init__()
         GUI[0]=True
         self.setWindowTitle("FFML Editor")
+        self.setFixedSize(1000,800)
+
+        self.load_settings()
+
+        self.__init_data()
         self.__init_menubar()
         self.__init_toolbar()
         self.__init_statusbar()
         self.__init_cwidget()
         self.__init_document()
+
+        # Show setting dialog for the first running
+        if gconstant.SHOW_SETTING_DIALOG:
+            self.show_setting_dialog()
+
+        self.show_message("Ready")
+
+
+    def __init_data(self):
+        self.out_file_name=None
 
 
     def __init_cwidget(self):
@@ -47,44 +64,78 @@ class MainWindow(QtWidgets.QMainWindow):
         self.menubar.addMenu(self.help_menu)
 
         #menu_titles = ['Open', 'Settings']
+        self.file_menu.addAction("Open...", self.open_file, QKeySequence(Qt.CTRL + Qt.Key_O))
         self.file_menu.addAction("Settings", self.show_setting_dialog, QKeySequence(Qt.CTRL + Qt.ALT + Qt.Key_S))
+
+
         self.help_menu.addAction("Shortcuts", self.show_shortcuts, QKeySequence(Qt.CTRL + Qt.ALT + Qt.Key_K))
         self.help_menu.addAction("About", self.show_help)
+
         self.build_menu.addAction("Parse",self.parse,QKeySequence(Qt.CTRL+Qt.Key_P))
         self.build_menu.addAction("Build",self.build,QKeySequence(Qt.CTRL+Qt.Key_B))
 
     def __init_toolbar(self):
         self.toolbar=self.addToolBar("Tool")
         self.toolbar.setMovable(False)
-        self.toolbar.addAction(QIcon(":/images/parse.png"),"Parse",self.parse)
-        self.toolbar.addAction(QIcon(":/images/build2.png"),"Build",self.build)
+        self.toolbar.addAction(QIcon(":/images/folder.png"),"Open",self.open_file)
+        self.toolbar.addAction(QIcon(":/images/save-filled.png"),"Save")
+        self.toolbar.addAction(QIcon(":/images/check.png"),"Parse",self.parse)
+        self.toolbar.addAction(QIcon(":/images/build-filled.png"),"Build",self.build)
+        self.toolbar.addAction(QIcon(":/images/play.png"),"Run")
 
     def __init_statusbar(self):
         self.statusbar=self.statusBar()
         #self.statusbar.setFixedHeight(20)
 
     def __save_tmp_file(self):
-        tmp_name=constant.TMP_FILE_NAME
-        with open(tmp_name,"w") as file:
-            file.write(self.code_doc.toPlainText())
+        if self.code_doc.isModified():
+            tmp_name=gconstant.TMP_FILE_NAME
+            with open(tmp_name,"w") as file:
+                file.write(self.code_doc.toPlainText())
+            self.code_doc.setModified(False)
+        return gconstant.TMP_FILE_NAME
+
+    def load_settings(self):
+        constants.translator_configs['SEQ_UNIT']=gconstant.configs.get_time_unit()
+        constants.translator_configs['SEQ_TIME']=gconstant.configs.get_compiler_value(gconstant.configs.SEQ_TIME)
+        #constants.translator_configs['LOG_FILE']=gconstant.configs.get_compiler_value(gconstant.configs.LOG_FILE_PATH)
 
     # private slots
+    def open_file(self):
+        fileName = QFileDialog.getOpenFileName(self, "Open FFML file", str(gconstant.DEFAULT_OPEN_PATH),
+                                               "FFML files (*.ffml)")
+        if fileName[0]:
+            with open(fileName[0],'r') as f:
+                self.code_doc.setPlainText(f.read())
+            self.show_log([])
+            self.show_message("File opened")
+
     def parse(self):
-        if self.code_doc.isModified():
-            self.__save_tmp_file()
-            self.code_doc.setModified(False)
+        file_name=self.__save_tmp_file()
 
         clear_log()
         self.show_log(["Parsing..."])
-        ok=self.translator.parse(in_file=constant.TMP_FILE_NAME)
+        ok=self.translator.parse(in_file=file_name)
         self.show_log(get_log_list()+(["Parsing succeed. No error reported"] if ok else ["Parsing failed."]))
 
 
     def build(self):
+        if not self.out_file_name:
+            fileName=QFileDialog.getSaveFileName(self,"Save as", str(gconstant.DEFAULT_OUTPUT_PATH), "Flink SQL files (*.fsql)")
+            if fileName[0]:
+                self.out_file_name=fileName[0]
+            else:
+                return
+
+        in_file=self.__save_tmp_file()
         clear_log()
+        ok=self.translator.translate(in_file=in_file,out_file=self.out_file_name)
+        self.show_log(get_log_list()+(["Compiling succeed. No error reported"] if ok else ["Compiling failed."]))
 
     def show_setting_dialog(self):
-        self.show_message("hello")
+        dialog=SettingDialog(self)
+        dialog.accepted.connect(self.load_settings)
+        dialog.exec()
 
     def show_shortcuts(self):
         pass
@@ -93,7 +144,7 @@ class MainWindow(QtWidgets.QMainWindow):
         msgBox = QtWidgets.QMessageBox()
         msgBox.setStyleSheet("QLabel{min-width: 600px;}")
         msgBox.setWindowTitle("Help")
-        msgBox.setText(constant.HELP_TEXT)
+        msgBox.setText(gconstant.HELP_TEXT)
         msgBox.exec()
 
     # Auxiliary functions ************************************#
@@ -101,7 +152,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.msg_edit.setText("\n".join(log_list))
 
     def show_message(self, msg):
-        self.statusbar.showMessage(str(msg), 4000)
+        self.statusbar.showMessage(str(msg), 2000)
+
+    def closing(self):
+        print("closing...")
+        gconstant.configs.save()
 
 
 if __name__ == '__main__':

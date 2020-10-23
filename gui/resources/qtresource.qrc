@@ -1,8 +1,13 @@
 <!DOCTYPE RCC><RCC version="1.0">
 <qresource>
     <file>images/build.png</file>
-    <file>images/build1.png</file>
-    <file>images/build2.png</file>
-    <file>images/parse.png</file>
+    <file>images/build-filled.png</file>
+    <file>images/check.png</file>
+    <file>images/check-filled.png</file>
+    <file>images/folder.png</file>
+    <file>images/folder-filled.png</file>
+    <file>images/save-filled.png</file>
+    <file>images/play-filled.png</file>
+    <file>images/play.png</file>
 </qresource>
 </RCC>

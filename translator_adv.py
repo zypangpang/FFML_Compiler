@@ -1,7 +1,7 @@
 #import logging
 import re
 
-from constants import SYMBOL_TYPE, COUNTER_TYPE, SEQ_TIME, SEQ_UNIT, PREDEFINED_EVENTS, LOG_LEVEL, TIME_UNIT,GEN_JAVA,COMMON_KEYS
+from constants import SYMBOL_TYPE, COUNTER_TYPE, translator_configs,  PREDEFINED_EVENTS, TIME_UNIT
 from parser import ASTNode
 from utils import MyTemplate, bt, ListTemplate, log_info,log_collect
 #from functools import reduce
@@ -11,6 +11,13 @@ Symbol Attr Memo:
 Policy: obj
 
 """
+SEQ_TIME=None
+SEQ_UNIT=None
+
+def get_configs():
+    global SEQ_TIME,SEQ_UNIT
+    SEQ_TIME = translator_configs['SEQ_TIME']
+    SEQ_UNIT = translator_configs['SEQ_UNIT']
 
 
 class Symbol:
@@ -234,6 +241,7 @@ class ASTVisitor:
             return default_func
 
     def visit(self, node, **kwargs):
+        get_configs()
         return self.__getfunc(node.type)(node, **kwargs)
 
     def visit_PolicyList(self, node: ASTNode):

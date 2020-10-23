@@ -46,3 +46,5 @@ class Ui_CentralWidget(object):
     def retranslateUi(self, CentralWidget):
         _translate = QtCore.QCoreApplication.translate
         CentralWidget.setWindowTitle(_translate("CentralWidget", "Form"))
+        self.codeEdit.setPlaceholderText(_translate("CentralWidget", "Type here to input FFML policies"))
+        self.msgEdit.setPlaceholderText(_translate("CentralWidget", "Here show compiler messages"))

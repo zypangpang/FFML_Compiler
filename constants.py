@@ -1,14 +1,13 @@
 from enum import Enum
 
-DEBUG=True
-GUI=[False]
-GEN_JAVA=False
-LOG_FILE='./translator.log'
+# ********* Internal. DO NOT CHANGE! **************
+
 #class EBNF_OP(Enum):
 #    NONE = 0
 #    PLUS = 1
 #    MULTIPLE = 2
 #    QUESTION = 3
+
 class LOG_LEVEL(Enum):
     '''
     Grammar Element type
@@ -70,15 +69,31 @@ KEYWORDS=['POLICYID' , 'THEN',  'TRUE', 'ONL', 'ATM', 'QUERY',  'CHQ', 'CNP', 'H
 
 COMMENT_SYM = '//'
 
+GUI=[False]
+
+# ********* Internal. DO NOT CHANGE! **************
+
+# ********* Configurable **************
+DEBUG=True
+GEN_JAVA=False
+
+translator_configs={
+    'SEQ_UNIT':TIME_UNIT.SECOND,
+    'SEQ_TIME':5,
+}
+
+def get_config_value(key):
+    return translator_configs[key]
 # Translator related
-SEQ_UNIT=TIME_UNIT.SECOND
-SEQ_TIME=5
+#SEQ_UNIT=TIME_UNIT.SECOND
+#SEQ_TIME=5
+
+LOG_FILE= './translator.log'
+
 PREDEFINED_EVENTS={
     "transfer",
     "password_change",
     "login"
 }
 
-COMMON_KEYS=['id','accountnumber']
-
-
+# ********* Configurable **************

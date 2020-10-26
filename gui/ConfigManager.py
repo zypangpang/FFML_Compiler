@@ -17,10 +17,12 @@ class GuiConfigs():
 
     TIME_UNIT = "time unit"
     SEQ_TIME = 'seq time'
+    LOG_FILE_PATH='log file path'
     #HTTP_HOST = "http host"
 
     OUT_FILE_PATH='out file path'
-    LOG_FILE_PATH='log file path'
+    FONT_SIZE='font size'
+
 
     @classmethod
     def check_config_file(cls,file_path):
@@ -37,6 +39,7 @@ class GuiConfigs():
         }
         configs[IDE_SECTION] = {
             cls.OUT_FILE_PATH: gconstants.DEFAULT_OUTPUT_PATH,
+            cls.FONT_SIZE:gconstants.DEFAULT_FONT_SIZE,
         }
         with open(file_path, "w") as f:
             configs.write(f)

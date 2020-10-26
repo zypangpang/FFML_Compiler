@@ -1,5 +1,5 @@
 from PyQt5 import QtWidgets
-from PyQt5.QtGui import QKeySequence, QIcon, QTextDocument
+from PyQt5.QtGui import QKeySequence, QIcon, QTextDocument, QFont, QFontDatabase
 from PyQt5.QtCore import Qt, QUrl
 from PyQt5.QtWidgets import QSizePolicy, QVBoxLayout, QFileDialog
 import gui.resources_gen.qtresource
@@ -7,6 +7,7 @@ import gui.resources_gen.qtresource
 from constants import GUI
 import gui.gui_constant as gconstant
 from gui.CentralWidget import CentralWidget
+from gui.Highlighter import Highlighter
 from gui.SettingDialog import SettingDialog
 from gui.utils import clear_log,get_log_list,choose_file
 import constants
@@ -21,7 +22,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setWindowTitle("FFML Editor")
         self.setFixedSize(1000,800)
 
-        self.load_settings()
 
         self.__init_data()
         self.__init_menubar()
@@ -30,9 +30,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.__init_cwidget()
         self.__init_document()
 
+
         # Show setting dialog for the first running
         if gconstant.SHOW_SETTING_DIALOG:
             self.show_setting_dialog()
+
+        self.load_settings()
 
         self.show_message("Ready")
 
@@ -47,10 +50,17 @@ class MainWindow(QtWidgets.QMainWindow):
         # self.cwidget.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding)
         self.msg_edit=self.cwidget.ui.msgEdit
         self.code_edit=self.cwidget.ui.codeEdit
+        #db=QFontDatabase()
+        #print(db.families())
+        font=QFont()
+        font.setFixedPitch(True)
+        font.setFamily("DejaVu Sans Mono")
+        self.code_edit.setFont(font)
         self.setCentralWidget(self.cwidget)
 
     def __init_document(self):
         self.code_doc=QTextDocument("",self)
+        self.highlighter=Highlighter(self.code_doc)
         self.code_edit.setDocument(self.code_doc)
 
 
@@ -99,6 +109,16 @@ class MainWindow(QtWidgets.QMainWindow):
         constants.translator_configs['SEQ_UNIT']=gconstant.configs.get_time_unit()
         constants.translator_configs['SEQ_TIME']=gconstant.configs.get_compiler_value(gconstant.configs.SEQ_TIME)
         #constants.translator_configs['LOG_FILE']=gconstant.configs.get_compiler_value(gconstant.configs.LOG_FILE_PATH)
+        font_size=int(gconstant.configs.get_ide_value(gconstant.configs.FONT_SIZE))
+
+        font = self.code_edit.currentFont()
+        font.setFamily("DejaVu Sans Mono")
+        font.setPointSize(font_size)
+        self.code_edit.setFont(font)
+
+        font=self.msg_edit.currentFont()
+        font.setPointSize(font_size)
+        self.msg_edit.setFont(font)
 
     # private slots
     def open_file(self):

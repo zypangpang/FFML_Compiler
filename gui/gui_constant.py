@@ -9,6 +9,7 @@ TMP_FILE_NAME='.code.tmp'
 DEFAULT_OPEN_PATH=Path.home()
 DEFAULT_OUTPUT_PATH=Path.home().joinpath("flink_sql/out.fsql")
 DEFAULT_CONFIG_PATH=Path.home().joinpath(".ffml_compiler/configs.ini")
+DEFAULT_FONT_SIZE=14
 
 configs=None
 SHOW_SETTING_DIALOG=False

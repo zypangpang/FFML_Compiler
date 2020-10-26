@@ -219,23 +219,7 @@
       <item row="2" column="0">
        <widget class="QLabel" name="bg_label_7">
         <property name="text">
-         <string>Zoom</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="1">
-       <widget class="QDoubleSpinBox" name="zoom_factor_box">
-        <property name="decimals">
-         <number>1</number>
-        </property>
-        <property name="minimum">
-         <double>0.100000000000000</double>
-        </property>
-        <property name="maximum">
-         <double>2.000000000000000</double>
-        </property>
-        <property name="singleStep">
-         <double>0.100000000000000</double>
+         <string>Font size</string>
         </property>
        </widget>
       </item>
@@ -246,6 +230,16 @@
        <widget class="QLabel" name="bg_label_6">
         <property name="text">
          <string>Out file path</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QSpinBox" name="font_size_box">
+        <property name="minimum">
+         <number>10</number>
+        </property>
+        <property name="maximum">
+         <number>50</number>
         </property>
        </widget>
       </item>

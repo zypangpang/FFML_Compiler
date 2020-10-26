@@ -29,6 +29,7 @@ class SettingDialog(QtWidgets.QDialog):
         self.compiler_widgets[configs.LOG_FILE_PATH] = self.ui.log_file_edit
         # ide
         self.ide_widgets[configs.OUT_FILE_PATH] = self.ui.out_file_edit
+        self.ide_widgets[configs.FONT_SIZE] = self.ui.font_size_box
 
     def __load_settings(self):
         for key, widget in self.compiler_widgets.items():

@@ -1,7 +1,7 @@
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QKeySequence, QIcon, QTextDocument, QFont, QFontDatabase
 from PyQt5.QtCore import Qt, QUrl
-from PyQt5.QtWidgets import QSizePolicy, QVBoxLayout, QFileDialog, QMessageBox
+from PyQt5.QtWidgets import QSizePolicy, QVBoxLayout, QFileDialog, QMessageBox, QPlainTextDocumentLayout
 import gui.resources_gen.qtresource
 
 from constants import GUI
@@ -50,8 +50,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.cwidget = CentralWidget()
         # self.cwidget.setStyleSheet("background-color:green;")
         # self.cwidget.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding)
-        self.msg_edit=self.cwidget.ui.msgEdit
-        self.code_edit=self.cwidget.ui.codeEdit
+        self.msg_edit=self.cwidget.msgEdit
+        self.code_edit=self.cwidget.codeEdit
         #db=QFontDatabase()
         #print(db.families())
         font=QFont()
@@ -62,6 +62,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def __init_document(self):
         self.code_doc=QTextDocument("",self)
+        layout=QPlainTextDocumentLayout(self.code_doc)
+        self.code_doc.setDocumentLayout(layout)
         self.highlighter=Highlighter(self.code_doc)
         self.code_edit.setDocument(self.code_doc)
 
@@ -101,9 +103,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.statusbar=self.statusBar()
         #self.statusbar.setFixedHeight(20)
 
-    def __save_tmp_file(self):
+    def __save_tmp_file(self,first=False):
         if self.code_doc.isModified():
-            self.file_modified=True
+            if not first:
+                self.file_modified=True
             tmp_name=gconstant.TMP_FILE_NAME
             with open(tmp_name,"w") as file:
                 file.write(self.code_doc.toPlainText())
@@ -119,7 +122,8 @@ class MainWindow(QtWidgets.QMainWindow):
         #constants.translator_configs['LOG_FILE']=gconstant.configs.get_compiler_value(gconstant.configs.LOG_FILE_PATH)
         font_size=int(gconstant.configs.get_ide_value(gconstant.configs.FONT_SIZE))
 
-        font = self.code_edit.currentFont()
+        #font = self.code_edit.currentFont()
+        font=QFont()
         font.setFamily("DejaVu Sans Mono")
         font.setPointSize(font_size)
         self.code_edit.setFont(font)
@@ -142,7 +146,7 @@ class MainWindow(QtWidgets.QMainWindow):
             with open(fileName[0],'r') as f:
                 self.code_doc.setPlainText(f.read())
             self.cur_file_name=fileName[0]
-            self.code_doc.setModified(False)
+            self.__save_tmp_file(True)
             self.show_log([])
             self.show_message("File opened")
 
@@ -169,7 +173,7 @@ class MainWindow(QtWidgets.QMainWindow):
         #if not self.cur_file_name: return True
         if self.file_is_modified():
             btn=QMessageBox.question(self,"Save file?","The file has been changed. Save file?",
-                                     buttons=QMessageBox.Yes|QMessageBox.No|QMessageBox.Cancel,defaultButton=QMessageBox.No)
+                                     buttons=QMessageBox.Cancel|QMessageBox.Yes|QMessageBox.No,defaultButton=QMessageBox.Yes)
             if btn==QMessageBox.Yes:
                 if not self.save():
                     return False

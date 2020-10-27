@@ -9,7 +9,6 @@ class Highlighter(QSyntaxHighlighter):
             self.format=format
 
 
-
     def __init__(self,parent):
         super().__init__(parent)
         self.highlighting_rules=[]
@@ -36,7 +35,7 @@ class Highlighter(QSyntaxHighlighter):
         self.keyword_format.setFontWeight(QFont.Bold)
         keywordPatterns = [
             r"\bPOLICYID\b", r"\bON\b", r"\bIF\b", r"\bTHEN\b", r"\bAND\b", r"\bOR\b", r"\bHISTORY\b", r"\bQUERY\b",
-            r"\bSEQ\b"
+            r"\bSEQ\b",r"\bTRUE\b",r"\bFALSE\b"
         ]
         self.highlighting_rules += [Highlighter.HighlightingRule(QRegularExpression(pattern), self.keyword_format)
                                    for pattern in keywordPatterns]
@@ -52,5 +51,3 @@ class Highlighter(QSyntaxHighlighter):
             while matchIterator.hasNext():
                 match = matchIterator.next()
                 self.setFormat(match.capturedStart(), match.capturedLength(), rule.format)
-
-

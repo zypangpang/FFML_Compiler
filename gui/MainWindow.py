@@ -1,7 +1,7 @@
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QKeySequence, QIcon, QTextDocument, QFont, QFontDatabase
 from PyQt5.QtCore import Qt, QUrl
-from PyQt5.QtWidgets import QSizePolicy, QVBoxLayout, QFileDialog
+from PyQt5.QtWidgets import QSizePolicy, QVBoxLayout, QFileDialog, QMessageBox
 import gui.resources_gen.qtresource
 
 from constants import GUI
@@ -42,6 +42,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def __init_data(self):
         self.out_file_name=None
+        self.cur_file_name=None
+        self.file_modified=False
 
 
     def __init_cwidget(self):
@@ -75,6 +77,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         #menu_titles = ['Open', 'Settings']
         self.file_menu.addAction("Open...", self.open_file, QKeySequence(Qt.CTRL + Qt.Key_O))
+        self.file_menu.addAction("Save", self.save, QKeySequence(Qt.CTRL + Qt.Key_S))
+        self.file_menu.addAction("Save as...", self.save_as, QKeySequence(Qt.CTRL +Qt.SHIFT + Qt.Key_S))
         self.file_menu.addAction("Settings", self.show_setting_dialog, QKeySequence(Qt.CTRL + Qt.ALT + Qt.Key_S))
 
 
@@ -88,7 +92,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.toolbar=self.addToolBar("Tool")
         self.toolbar.setMovable(False)
         self.toolbar.addAction(QIcon(":/images/folder.png"),"Open",self.open_file)
-        self.toolbar.addAction(QIcon(":/images/save-filled.png"),"Save")
+        self.toolbar.addAction(QIcon(":/images/save-filled.png"),"Save",self.save)
         self.toolbar.addAction(QIcon(":/images/check.png"),"Parse",self.parse)
         self.toolbar.addAction(QIcon(":/images/build-filled.png"),"Build",self.build)
         self.toolbar.addAction(QIcon(":/images/play.png"),"Run")
@@ -99,11 +103,15 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def __save_tmp_file(self):
         if self.code_doc.isModified():
+            self.file_modified=True
             tmp_name=gconstant.TMP_FILE_NAME
             with open(tmp_name,"w") as file:
                 file.write(self.code_doc.toPlainText())
             self.code_doc.setModified(False)
         return gconstant.TMP_FILE_NAME
+
+    def file_is_modified(self):
+        return self.file_modified or self.code_doc.isModified()
 
     def load_settings(self):
         constants.translator_configs['SEQ_UNIT']=gconstant.configs.get_time_unit()
@@ -120,15 +128,57 @@ class MainWindow(QtWidgets.QMainWindow):
         font.setPointSize(font_size)
         self.msg_edit.setFont(font)
 
+    def reset_file_state(self):
+        self.file_modified=False
+        self.cur_file_name=None
+        self.out_file_name=None
+
     # private slots
     def open_file(self):
+        if not self.close_file(): return
         fileName = QFileDialog.getOpenFileName(self, "Open FFML file", str(gconstant.DEFAULT_OPEN_PATH),
                                                "FFML files (*.ffml)")
         if fileName[0]:
             with open(fileName[0],'r') as f:
                 self.code_doc.setPlainText(f.read())
+            self.cur_file_name=fileName[0]
+            self.code_doc.setModified(False)
             self.show_log([])
             self.show_message("File opened")
+
+    def save_as(self):
+       fileName=QFileDialog.getSaveFileName(self,"Save as", self.cur_file_name if self.cur_file_name  else str(gconstant.DEFAULT_OPEN_PATH), "FFML files (*.ffml)")
+       if fileName[0]:
+           save_file=fileName[0]
+           with open(save_file,'w') as f:
+               f.write(self.code_doc.toPlainText())
+           self.cur_file_name=save_file
+           return True
+       else:
+           return False
+
+    def save(self):
+        if self.cur_file_name:
+            with open(self.cur_file_name,'w') as f:
+                f.write(self.code_doc.toPlainText())
+            return True
+        else:
+            return self.save_as()
+
+    def close_file(self):
+        #if not self.cur_file_name: return True
+        if self.file_is_modified():
+            btn=QMessageBox.question(self,"Save file?","The file has been changed. Save file?",
+                                     buttons=QMessageBox.Yes|QMessageBox.No|QMessageBox.Cancel,defaultButton=QMessageBox.No)
+            if btn==QMessageBox.Yes:
+                if not self.save():
+                    return False
+            elif btn==QMessageBox.Cancel:
+                return False
+        self.reset_file_state()
+        self.code_doc.clear()
+        self.msg_edit.clear()
+        return True
 
     def parse(self):
         file_name=self.__save_tmp_file()
@@ -174,9 +224,16 @@ class MainWindow(QtWidgets.QMainWindow):
     def show_message(self, msg):
         self.statusbar.showMessage(str(msg), 2000)
 
-    def closing(self):
-        print("closing...")
-        gconstant.configs.save()
+    # Override
+    def closeEvent(self, event) -> None:
+        if not self.close_file():
+            event.ignore()
+            return
+        super().closeEvent(event)
+
+    #def closing(self):
+    #    print("app closing...")
+    #    gconstant.configs.save()
 
 
 if __name__ == '__main__':

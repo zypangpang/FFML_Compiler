@@ -80,17 +80,14 @@ class Main:
         :param out_file: output file path. If None, output to stdout.
         :return:
         '''
-        error=None
         try:
             self.__parse(in_file,ast,output,out_file)
         except Exception as e:
-            error=e
+            log_collect(str(e), "error")
+            print(e)
+            return e
 
-        if error:
-            log_collect(str(error), "error")
-            print(error)
-            return False
-        return True
+        return None
 
 
     def __parse(self, in_file, ast, output, out_file):
@@ -120,16 +117,12 @@ class Main:
         :param out_file: Output file path. If None, write to stdout.
         :return:
         '''
-        error=None
         try:
             root=self.__parse(in_file, ast=True,out_file=None,output=False)
         except Exception as e:
-            error=e
-
-        if error:
-            log_collect(str(error), "error")
-            print(error)
-            return False
+            log_collect(str(e), "error")
+            print(e)
+            return e
 
         visitor = ASTVisitor()
         policies = visitor.visit(root)
@@ -144,7 +137,7 @@ class Main:
             else:
                 out_file.writelines(s+'\n' for s in p)
         if file: out_file.close()
-        return True
+        return None
 
 if __name__ == '__main__':
     logging.info("FFML translator started.")

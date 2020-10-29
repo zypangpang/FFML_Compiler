@@ -4,17 +4,20 @@ from gui.utils import add_log
 
 
 class SyntaxError(Exception):
-    def __init__(self,type,desc):
+    def __init__(self,type,line_number,desc):
         self.type=type
         self.desc=desc
+        self.line_number=line_number
     def __str__(self):
-        return f"Syntax error:\ntype: {self.type}\n{self.desc}"
+        return f"Syntax error {self.type}\n{self.desc}"
+
 class LexicalError(Exception):
-    def __init__(self,type,desc):
+    def __init__(self,type,line_number,desc):
         self.type=type
         self.desc=desc
+        self.line_number=line_number
     def __str__(self):
-        return f"Lexical error:\ntype: {self.type}\n{self.desc}"
+        return f"Lexical error {self.type}\n{self.desc}"
 
 def nonterm_name_generator(begin_chars):
     now = 'A'

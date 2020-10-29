@@ -141,7 +141,7 @@ class Lexer:
         :return:
         '''
         if self.eof:
-            raise LexicalError("EOF","No more characters")
+            raise LexicalError("EOF",-1,"No more characters")
         buffer=self.__buffer[self.__forward_buffer]
         ans=buffer[self.__forward]
         next=self.__forward+1
@@ -199,13 +199,14 @@ class Lexer:
 
 
     def __get_error_str(self,cur_str):
-        begin = f"Lexical error at line {self.get_cur_line_num()}"
+        lineN=self.get_cur_line_num()
+        begin = f"Lexical error at line {lineN}"
         dash_num = 10
         first_line = f"{'-' * dash_num}{begin}{'-' * dash_num}"
         ans = f"{first_line}\n" \
               f"Unrecognized string '{cur_str}'\n" \
               f"{'-' * len(first_line)}"
-        return ans
+        return lineN,ans
 
     def get_cur_line_num(self):
         return self.__cur_line_num
@@ -232,7 +233,7 @@ class Lexer:
         :return: current token
         '''
         if self.__cur_token:
-            raise LexicalError("InnerError","Unexpected fetch char when cur_token is not None.")
+            raise LexicalError("InnerError",-1,"Unexpected fetch char when cur_token is not None.")
         if self.eof:
             self.__cur_token= Token(ENDMARK,{'str':ENDMARK})
             return
@@ -263,7 +264,8 @@ class Lexer:
             self.__cur_token=token
         else:
             #print(self.__next_char())
-            raise LexicalError("LexicalError",self.__get_error_str(cur_str))
+            line,info=self.__get_error_str(cur_str)
+            raise LexicalError("LexicalError",line,info)
 
 def get_dfa_from_file(path):
     '''

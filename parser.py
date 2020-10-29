@@ -53,9 +53,10 @@ class Parser:
         return X == token.attr['str']
     '''
 
-    def __get_error_str(self, lexer, expect, given):
+    def __get_error_info(self, lexer, expect, given):
         left,right=lexer.get_error_context()
-        begin=f"Syntax error at line {lexer.get_cur_line_num()}"
+        lineN=lexer.get_cur_line_num()
+        begin=f"Syntax error at line {lineN}"
         dash_num=10
         first_line=f"{'-'*dash_num}{begin}{'-'*dash_num}"
         ans=f"{first_line}\n"\
@@ -63,7 +64,7 @@ class Parser:
             f">>> Expect {expect}\n"\
             f"<<< But '{given}' is given\n"\
             f"{'-'*len(first_line)}"
-        return ans
+        return lineN,ans
 
     def parse_tree(self):
         '''
@@ -97,13 +98,14 @@ class Parser:
                     stack.pop()
                     token=lexer.get_next_token()
                 else:
-                    raise SyntaxError("TermNotMatch", self.__get_error_str(lexer, X.content, a))
+                    line,info=self.__get_error_info(lexer, X.content, a)
+                    raise SyntaxError("TermNotMatch", line,info)
                     #print(X,token)
             elif a not in self.__M[X.content]:
-                error=self.__get_error_str(lexer, tuple(self.__M[X.content].keys()),
-                                     token.attr['entry']['str'] if token.name=='<ID>' else token.attr['str'])
+                line,error=self.__get_error_info(lexer, tuple(self.__M[X.content].keys()),
+                                            token.attr['entry']['str'] if token.name=='<ID>' else token.attr['str'])
                 #print(X,token)
-                raise SyntaxError("NoMatchProdution",error)
+                raise SyntaxError("NoMatchProdution",line,error)
             else:
                 prod=self.__p_map[self.__M[X.content][a]]
 
@@ -124,7 +126,7 @@ class Parser:
         return self.__PolicyList()
 
     def __raise_inner_error(self):
-        raise SyntaxError("InnerError","Unexpected production ID")
+        raise SyntaxError("InnerError",-1,"Unexpected production ID")
         #self.__get_error_str(self.lexer, tuple(self.__M[nt_name].keys()),
                              #token.attr['entry']['str'] if token.name == '<ID>' else token.attr['str'])
         # print(X,token)
@@ -137,16 +139,17 @@ class Parser:
         if terminal == a:  # need expansion
             return token
         else:
-            raise SyntaxError("TermNotMatch", self.__get_error_str(self.lexer, terminal, a))
+            line, info = self.__get_error_info(self.lexer, terminal, a)
+            raise SyntaxError("TermNotMatch", line,info)
 
 
     def __get_prod_id(self,nt_name,next_token):
         a = self.__get_token_info(next_token)
         if a not in self.__M[nt_name]:
-            error=self.__get_error_str(self.lexer, tuple(self.__M[nt_name].keys()),
-                                 next_token.attr['entry']['str'] if next_token.name == '<ID>' else next_token.attr['str'])
+            line,error=self.__get_error_info(self.lexer, tuple(self.__M[nt_name].keys()),
+                                        next_token.attr['entry']['str'] if next_token.name == '<ID>' else next_token.attr['str'])
             # print(X,token)
-            raise SyntaxError("NoMatchProdution",error)
+            raise SyntaxError("NoMatchProdution",line,error)
         prod_id = self.__M[nt_name][a]
         return prod_id
 

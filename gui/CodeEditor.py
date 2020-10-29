@@ -1,5 +1,5 @@
 from PyQt5.QtCore import QSize, QRect, Qt, qRound
-from PyQt5.QtGui import QColor, QTextFormat, QPainter
+from PyQt5.QtGui import QColor, QTextFormat, QPainter, QTextCursor
 from PyQt5.QtWidgets import QWidget, QPlainTextEdit, QTextEdit
 
 
@@ -17,6 +17,8 @@ class LineNumberArea(QWidget):
 class CodeEditor(QPlainTextEdit):
     def __init__(self,parent):
         super().__init__(parent)
+        self.highlightColor=QColor(Qt.yellow).lighter(160)
+
         self.lineNumberArea=LineNumberArea(self)
         self.blockCountChanged.connect(self.updateLineNumberAreaWidth)
         self.updateRequest.connect(self.updateLineNumberArea)
@@ -59,7 +61,7 @@ class CodeEditor(QPlainTextEdit):
         if not self.isReadOnly():
             selection=QTextEdit.ExtraSelection()
 
-            lineColor = QColor(Qt.yellow).lighter(160)
+            lineColor = self.highlightColor
 
             selection.format.setBackground(lineColor)
             selection.format.setProperty(QTextFormat.FullWidthSelection, True)
@@ -68,6 +70,7 @@ class CodeEditor(QPlainTextEdit):
             extraSelections.append(selection)
 
         self.setExtraSelections(extraSelections)
+
 
     def lineNumberAreaPaintEvent(self,event):
         painter=QPainter(self.lineNumberArea)
@@ -80,11 +83,51 @@ class CodeEditor(QPlainTextEdit):
             if block.isVisible() and bottom >= event.rect().top():
                 number = str(blockNumber + 1)
                 painter.setPen(Qt.black)
-                painter.drawText(0, top, self.lineNumberArea.width(), self.fontMetrics().height(),
+                painter.drawText(0, top, self.lineNumberArea.width()-3, self.fontMetrics().height(),
                                                          Qt.AlignRight, number)
 
             block = block.next()
             top = bottom
             bottom = top + qRound(self.blockBoundingRect(block).height())
             blockNumber+=1
+
+    def getLineNumber(self):
+        cursor = self.textCursor()
+        cursor.movePosition(QTextCursor.StartOfLine)
+
+        lines = 1
+        #print(f"block: {self.blockCount()}")
+        #print(f"pInB:{cursor.positionInBlock()}")
+        while cursor.positionInBlock() > 0 :
+            cursor.movePosition(QTextCursor.Up)
+            lines+=1
+
+        block = cursor.block().previous()
+
+        while block.isValid():
+            lines += block.lineCount()
+            block = block.previous()
+
+    def moveToLine(self,lineNum):
+        cursor=self.textCursor()
+        cursor.movePosition(QTextCursor.Start)
+
+        block=cursor.block().next()
+        line=1
+
+        while block.isValid() and line<lineNum:
+            cursor.movePosition(QTextCursor.NextBlock)
+            block=block.next()
+            line+=1
+
+        self.setTextCursor(cursor)
+
+    def setHighLightColor(self,error_color=True):
+        if error_color:
+            self.highlightColor=QColor(Qt.red).lighter(160)
+        else:
+            self.highlightColor=QColor(Qt.yellow).lighter(160)
+
+
+
 

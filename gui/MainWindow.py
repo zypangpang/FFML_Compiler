@@ -13,6 +13,8 @@ from gui.utils import clear_log,get_log_list,choose_file
 import constants
 
 from main import Main
+from utils import LexicalError,SyntaxError
+
 
 class MainWindow(QtWidgets.QMainWindow):
     translator=Main()
@@ -58,6 +60,7 @@ class MainWindow(QtWidgets.QMainWindow):
         font.setFixedPitch(True)
         font.setFamily("DejaVu Sans Mono")
         self.code_edit.setFont(font)
+        self.msg_edit.setFont(font)
         self.setCentralWidget(self.cwidget)
 
     def __init_document(self):
@@ -88,7 +91,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.help_menu.addAction("About", self.show_help)
 
         self.build_menu.addAction("Parse",self.parse,QKeySequence(Qt.CTRL+Qt.Key_P))
-        self.build_menu.addAction("Build",self.build,QKeySequence(Qt.CTRL+Qt.Key_B))
+        self.build_menu.addAction("Compile", self.compile, QKeySequence(Qt.CTRL + Qt.Key_B))
 
     def __init_toolbar(self):
         self.toolbar=self.addToolBar("Tool")
@@ -96,7 +99,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.toolbar.addAction(QIcon(":/images/folder.png"),"Open",self.open_file)
         self.toolbar.addAction(QIcon(":/images/save-filled.png"),"Save",self.save)
         self.toolbar.addAction(QIcon(":/images/check.png"),"Parse",self.parse)
-        self.toolbar.addAction(QIcon(":/images/build-filled.png"),"Build",self.build)
+        self.toolbar.addAction(QIcon(":/images/build-filled.png"),"Compile", self.compile)
         self.toolbar.addAction(QIcon(":/images/play.png"),"Run")
 
     def __init_statusbar(self):
@@ -127,10 +130,11 @@ class MainWindow(QtWidgets.QMainWindow):
         font.setFamily("DejaVu Sans Mono")
         font.setPointSize(font_size)
         self.code_edit.setFont(font)
-
-        font=self.msg_edit.currentFont()
-        font.setPointSize(font_size)
         self.msg_edit.setFont(font)
+
+        #font=self.msg_edit.currentFont()
+        #font.setPointSize(font_size)
+        #self.msg_edit.setFont(font)
 
     def reset_file_state(self):
         self.file_modified=False
@@ -189,11 +193,22 @@ class MainWindow(QtWidgets.QMainWindow):
 
         clear_log()
         self.show_log(["Parsing..."])
-        ok=self.translator.parse(in_file=file_name)
-        self.show_log(get_log_list()+(["Parsing succeed. No error reported"] if ok else ["Parsing failed."]))
+        e=self.translator.parse(in_file=file_name)
+        if e:
+            self.show_log(get_log_list() + ["Parsing failed."])
+            if isinstance(e,(SyntaxError,LexicalError)):
+                lineNum=e.line_number
+                print(lineNum)
+                self.code_edit.setHighLightColor(True)
+                self.code_edit.moveToLine(lineNum)
+                self.code_edit.setHighLightColor(False)
+        else:
+            self.show_log(get_log_list()+["Parsing succeed. No error reported"])
+        self.show_message("Parsing finished")
 
 
-    def build(self):
+
+    def compile(self):
         if not self.out_file_name:
             fileName=QFileDialog.getSaveFileName(self,"Save as", str(gconstant.DEFAULT_OUTPUT_PATH), "Flink SQL files (*.fsql)")
             if fileName[0]:
@@ -203,8 +218,19 @@ class MainWindow(QtWidgets.QMainWindow):
 
         in_file=self.__save_tmp_file()
         clear_log()
-        ok=self.translator.translate(in_file=in_file,out_file=self.out_file_name)
-        self.show_log(get_log_list()+(["Compiling succeed. No error reported"] if ok else ["Compiling failed."]))
+        e=self.translator.translate(in_file=in_file,out_file=self.out_file_name)
+        if e:
+            self.show_log(get_log_list() + ["Compiling failed."])
+            if isinstance(e, (SyntaxError, LexicalError)):
+                lineNum = e.line_number
+                print(lineNum)
+                self.code_edit.setHighLightColor(True)
+                self.code_edit.moveToLine(lineNum)
+                self.code_edit.setHighLightColor(False)
+        else:
+            self.show_log(get_log_list() + ["Compiling succeed. No error reported"])
+        self.show_message("Compiling finished")
+
 
     def show_setting_dialog(self):
         dialog=SettingDialog(self)

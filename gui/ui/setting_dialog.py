@@ -15,10 +15,10 @@ class Ui_SettingDialog(object):
     def setupUi(self, SettingDialog):
         SettingDialog.setObjectName("SettingDialog")
         SettingDialog.setWindowModality(QtCore.Qt.WindowModal)
-        SettingDialog.resize(430, 480)
+        SettingDialog.resize(430, 353)
         SettingDialog.setModal(True)
         self.buttonBox = QtWidgets.QDialogButtonBox(SettingDialog)
-        self.buttonBox.setGeometry(QtCore.QRect(10, 430, 411, 31))
+        self.buttonBox.setGeometry(QtCore.QRect(10, 310, 411, 31))
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
         self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
         self.buttonBox.setObjectName("buttonBox")

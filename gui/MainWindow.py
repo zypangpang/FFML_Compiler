@@ -143,10 +143,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
     # private slots
     def open_file(self):
-        if not self.close_file(): return
         fileName = QFileDialog.getOpenFileName(self, "Open FFML file", str(gconstant.DEFAULT_OPEN_PATH),
                                                "FFML files (*.ffml)")
         if fileName[0]:
+            if not self.close_file(): return
             with open(fileName[0],'r') as f:
                 self.code_doc.setPlainText(f.read())
             self.cur_file_name=fileName[0]

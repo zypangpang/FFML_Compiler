@@ -112,6 +112,7 @@ class CodeEditor(QPlainTextEdit):
         cursor=self.textCursor()
         cursor.movePosition(QTextCursor.Start)
 
+        # For PlainTextDocumentLayout, a block is one line.
         block=cursor.block().next()
         line=1
 

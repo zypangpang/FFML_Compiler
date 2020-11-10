@@ -71,7 +71,14 @@ COMMENT_SYM = '//'
 
 GUI=[False]
 
-# ********* Internal. DO NOT CHANGE! **************
+# --------- optimization switch -------------
+OPT_UNION_ALL=False
+OPT_MERGE_TABLE=True
+OPT_UDF=True
+OPT_FLINK_CONF=True
+# -------------------------------------------
+
+# ********* ********************* **************
 
 # ********* Configurable **************
 DEBUG=True

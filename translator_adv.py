@@ -1,6 +1,7 @@
 #import logging
 import re
 
+import constants
 from constants import SYMBOL_TYPE, COUNTER_TYPE, translator_configs,  PREDEFINED_EVENTS, TIME_UNIT
 from parser import ASTNode
 from utils import MyTemplate, bt, ListTemplate, log_info,log_collect
@@ -264,27 +265,58 @@ class ASTVisitor:
         # log_print("visit String " + node.value)
         return node.value
 
-    def visit_ConditionStatement(self, node: ASTNode):
-        stack = []
-        table = self.visit(node.children[0])
-        stack.append(table)
-        i = 1
+    def __opt_unionall_condition_tables(self,node:ASTNode):
+        event_tables = self.symbol_table.resolve("event_table").attr['value']
+        condition_tables=[]
+        i=0
         while i < len(node.children):
-            op = self.visit(node.children[i])
-            if op == "AND":
-                cur_table = stack.pop()
+            end=0
+            for table in event_tables:
+                j=i
+                self.__update_current_table(table)
+                cur_table=self.visit(node.children[j])
                 self.__update_current_table(cur_table)
-            else:
-                event_table = self.symbol_table.resolve("event_table").attr['value']
-                self.__update_current_table(event_table)
-            stack.append(self.visit(node.children[i + 1]))
-            i += 2
-        condition_sqls = [
-            get_template("PROJ").set_value("PROJ", "*").set_value("TABLE", ctable) for ctable in stack
-        ]
-        template_union = get_template("UNION_ALL").set_list(condition_sqls)
-        t_name = self.create_view(template_union, "condition_union", key='id')
-        self.symbol_table.define(Symbol("condition_table", SYMBOL_TYPE.INTERNAL, {"type": "str", "value": t_name}))
+                j+=1
+                while j < len(node.children) and self.visit(node.children[j])=="AND":
+                    cur_table=self.visit(node.children[j+1])
+                    self.__update_current_table(cur_table)
+                    j+=2
+                condition_tables.append(cur_table)
+                end=j
+            i=end+1
+        return condition_tables
+
+    def visit_ConditionStatement(self, node: ASTNode):
+        if constants.OPT_UNION_ALL:
+            stack=self.__opt_unionall_condition_tables(node)
+        else:
+            stack = []
+            event_table = self.symbol_table.resolve("event_table").attr['value'][0]
+            self.__update_current_table(event_table)
+            table = self.visit(node.children[0])
+            stack.append(table)
+            i = 1
+            while i < len(node.children):
+                op = self.visit(node.children[i])
+                if op == "AND":
+                    cur_table = stack.pop()
+                    self.__update_current_table(cur_table)
+                else:
+                    event_table = self.symbol_table.resolve("event_table").attr['value'][0]
+                    self.__update_current_table(event_table)
+                stack.append(self.visit(node.children[i + 1]))
+                i += 2
+
+        if constants.OPT_UNION_ALL:
+            t_names=stack
+        else:
+            condition_sqls = [
+                get_template("PROJ").set_value("PROJ", "*").set_value("TABLE", ctable) for ctable in stack
+            ]
+            template_union = get_template("UNION_ALL").set_list(condition_sqls)
+            t_names = [self.create_view(template_union, "condition_union", key='id')]
+
+        self.symbol_table.define(Symbol("condition_table", SYMBOL_TYPE.INTERNAL, {"type": "list", "value": t_names}))
 
     def visit_And(self, node):
         return "AND"
@@ -363,14 +395,17 @@ class ASTVisitor:
             if e != events[0]:
                 raise Exception("The last event of all event conditions need to be identical")
         self.symbol_table.define(Symbol("event", SYMBOL_TYPE.INTERNAL, {'type': 'str', 'value': events[0]}))
-        event_sqls = [get_template("PROJ")
-                          .set_value("PROJ", "*")
-                          .set_value("TABLE", et)
-                          .get_code() for et in event_tables]
-        template_union = get_template("UNION_ALL").set_list(event_sqls)
-        event_table = self.create_view(template_union, self.get_new_name(COUNTER_TYPE.EVENT), key='id')
-        self.symbol_table.define(Symbol("event_table", SYMBOL_TYPE.INTERNAL, {'type': 'str', 'value': event_table}))
-        self.__update_current_table(event_table)
+
+        if not constants.OPT_UNION_ALL:
+            event_sqls = [get_template("PROJ")
+                              .set_value("PROJ", "*")
+                              .set_value("TABLE", et)
+                              .get_code() for et in event_tables]
+            template_union = get_template("UNION_ALL").set_list(event_sqls)
+            event_tables = [self.create_view(template_union, self.get_new_name(COUNTER_TYPE.EVENT), key='id')]
+
+        self.symbol_table.define(Symbol("event_table", SYMBOL_TYPE.INTERNAL, {'type': 'list', 'value': event_tables}))
+        #self.__update_current_table(event_tables)
 
     def visit_SingleEvent(self, node: ASTNode):
         # log_print("visit SingleEvent")
@@ -408,26 +443,14 @@ class ASTVisitor:
 
             event_seq = params['event_list']
             ori_event_name = event_seq[-1]
-            union_list = []
-            for event in event_seq:
-                t_name = f"{channel}_{event}"
-                tselect = get_template("SELECT") \
-                    .set_value("PROJ", "*") \
-                    .set_value("TABLE", bt(event)) \
-                    .set_value("CONDITION", f"channel = '{channel}'")
-                self.create_view(tselect, t_name, key='id')
-                union_list.append(get_template("PROJ")
-                                  .set_value("PROJ", f"id,accountnumber,rowtime,eventtype")
-                                  .set_value("TABLE", bt(t_name))
-                                  .get_code())
 
-            union_smt = get_template("UNION_ALL").set_list(union_list)
-            # t_id = self.counters.inc_counter(COMMON_COUNTER['event'])
-            # t_name = f"event_{t_id}"
-            t_name = self.get_new_name(COUNTER_TYPE.EVENT)
-            self.create_view(union_smt, t_name, key='id')
+            if constants.OPT_UNION_ALL:
+                t_name="event"
+            else:
+                t_name=self.__seq_event_union_all(event_seq,channel)
 
-            bt_event_seq = bt(event_seq)
+
+            #bt_event_seq = bt(event_seq)
             match_template = get_template("MATCH") \
                 .set_value("PROJ", "*") \
                 .set_value("TABLE", t_name) \
@@ -455,6 +478,27 @@ class ASTVisitor:
 
         # self.event_tables.append(final_event_table)
         return ori_event_name, final_event_table
+
+    def __seq_event_union_all(self,event_seq,channel):
+        union_list = []
+        for event in event_seq:
+            t_name = f"{channel}_{event}"
+            tselect = get_template("SELECT") \
+                .set_value("PROJ", "*") \
+                .set_value("TABLE", bt(event)) \
+                .set_value("CONDITION", f"channel = '{channel}'")
+            self.create_view(tselect, t_name, key='id')
+            union_list.append(get_template("PROJ")
+                              .set_value("PROJ", f"id,accountnumber,rowtime,eventtype")
+                              .set_value("TABLE", bt(t_name))
+                              .get_code())
+
+        union_smt = get_template("UNION_ALL").set_list(union_list)
+        # t_id = self.counters.inc_counter(COMMON_COUNTER['event'])
+        # t_name = f"event_{t_id}"
+        t_name = self.get_new_name(COUNTER_TYPE.EVENT)
+        self.create_view(union_smt, t_name, key='id')
+        return t_name
 
     def visit_Channel(self, node: ASTNode):
         # log_print("visit Channel")
@@ -730,15 +774,16 @@ class BuiltInFuncs:
     @classmethod
     def __insert_table(cls, t_name, params, visitor):
         try:
-            cond_table = visitor.symbol_table.resolve("condition_table").attr['value']
+            cond_tables = visitor.symbol_table.resolve("condition_table").attr['value']
         except KeyError:
             raise Exception("Condition table not defined")
         proj = ','.join([bt(param['value'][1]) for param in params])
-        template = get_template("INSERT").set_value("TABLE", t_name) \
-            .set_value("CONTENT", get_template("PROJ")
-                       .set_value("PROJ", proj)
-                       .set_value("TABLE", cond_table).get_code())
-        visitor.add_policy_sql(template)
+        for cond_table in cond_tables:
+            template = get_template("INSERT").set_value("TABLE", t_name) \
+                .set_value("CONTENT", get_template("PROJ")
+                           .set_value("PROJ", proj)
+                           .set_value("TABLE", cond_table).get_code())
+            visitor.add_policy_sql(template)
 
     @classmethod
     def alert(cls, params, visitor):

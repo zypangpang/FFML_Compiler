@@ -1,6 +1,6 @@
 import logging
 import re
-
+import constants
 from constants import SYMBOL_TYPE, COUNTER_TYPE, translator_configs, PREDEFINED_EVENTS, LOG_LEVEL, TIME_UNIT,GEN_JAVA
 from parser import ASTNode
 from utils import MyTemplate, bt, ListTemplate, log_info,log_collect
@@ -387,26 +387,13 @@ class ASTVisitor:
 
             event_seq = params['event_list']
             ori_event_name = event_seq[-1]
-            union_list = []
-            for event in event_seq:
-                t_name = f"{channel}_{event}"
-                tselect = get_template("SELECT") \
-                    .set_value("PROJ", "*") \
-                    .set_value("TABLE", bt(event)) \
-                    .set_value("CONDITION", f"channel = '{channel}'")
-                self.create_view(tselect, t_name, key='id')
-                union_list.append(get_template("PROJ")
-                                  .set_value("PROJ", f"id,accountnumber,rowtime,eventtype")
-                                  .set_value("TABLE", bt(t_name))
-                                  .get_code())
 
-            union_smt = get_template("UNION_ALL").set_list(union_list)
-            # t_id = self.counters.inc_counter(COMMON_COUNTER['event'])
-            # t_name = f"event_{t_id}"
-            t_name = self.get_new_name(COUNTER_TYPE.EVENT)
-            self.create_view(union_smt, t_name, key='id')
+            if constants.OPT_UNION_ALL:
+                t_name="event"
+            else:
+                t_name=self.__seq_event_union_all(event_seq,channel)
 
-            bt_event_seq = bt(event_seq)
+            #bt_event_seq = bt(event_seq)
             match_template = get_template("MATCH") \
                 .set_value("PROJ", "*") \
                 .set_value("TABLE", t_name) \
@@ -434,6 +421,27 @@ class ASTVisitor:
 
         # self.event_tables.append(final_event_table)
         return ori_event_name, final_event_table
+
+    def __seq_event_union_all(self,event_seq,channel):
+        union_list = []
+        for event in event_seq:
+            t_name = f"{channel}_{event}"
+            tselect = get_template("SELECT") \
+                .set_value("PROJ", "*") \
+                .set_value("TABLE", bt(event)) \
+                .set_value("CONDITION", f"channel = '{channel}'")
+            self.create_view(tselect, t_name, key='id')
+            union_list.append(get_template("PROJ")
+                              .set_value("PROJ", f"id,accountnumber,rowtime,eventtype")
+                              .set_value("TABLE", bt(t_name))
+                              .get_code())
+
+        union_smt = get_template("UNION_ALL").set_list(union_list)
+        # t_id = self.counters.inc_counter(COMMON_COUNTER['event'])
+        # t_name = f"event_{t_id}"
+        t_name = self.get_new_name(COUNTER_TYPE.EVENT)
+        self.create_view(union_smt, t_name, key='id')
+        return t_name
 
     def visit_Channel(self, node: ASTNode):
         # log_print("visit Channel")

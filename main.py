@@ -43,6 +43,7 @@ def get_parse_table(grammar):
      #       print(f"    {a}: {p_map[M[X][a]]}")
     # for p in M[X][a]:
     #    print(f"        {p_map[p]}")
+
 def output_parse_table(M,endmark):
     for x in M:
         print(f"{x} :")

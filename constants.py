@@ -72,7 +72,7 @@ COMMENT_SYM = '//'
 GUI=[False]
 
 # --------- optimization switch -------------
-OPT_UNION_ALL=False
+OPT_UNION_ALL=True
 OPT_MERGE_TABLE=True
 OPT_UDF=True
 OPT_FLINK_CONF=True

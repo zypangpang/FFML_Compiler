@@ -1,5 +1,6 @@
 #import logging
 import re
+from typing import List
 
 import constants
 from constants import SYMBOL_TYPE, COUNTER_TYPE, translator_configs,  PREDEFINED_EVENTS, TIME_UNIT
@@ -194,6 +195,11 @@ class ASTVisitor:
         self.counters = SymbolCounter()
         self.policies = []
 
+        self.table_kv={}
+        self.tables=set()
+
+        self.actions=set()
+
     def __reset_policy(self):
         self.symbol_table = SymbolTable()
 
@@ -208,10 +214,12 @@ class ASTVisitor:
         self.symbol_table.define(Symbol("current_table", SYMBOL_TYPE.INTERNAL, {'value': table}))
 
     def create_view(self, sql_template, t_name, key, **kwargs):
-        template_view = get_template("CREATE_VIEW") \
-            .set_value("NAME", bt(t_name)) \
-            .set_value("BODY", sql_template.get_code())
-        self.add_policy_sql(template_view)
+        if t_name not in self.tables:
+            template_view = get_template("CREATE_VIEW") \
+                .set_value("NAME", bt(t_name)) \
+                .set_value("BODY", sql_template.get_code())
+            self.add_policy_sql(template_view)
+            self.tables.add(t_name)
         self.symbol_table.define(Symbol(t_name, SYMBOL_TYPE.TABLE, {'q': sql_template.get_code(),'key':key, **kwargs}))
         return t_name
 
@@ -222,12 +230,40 @@ class ASTVisitor:
             raise Exception("Policy object undefined")
         policy.add_sql(template.get_code())
 
-    def get_new_name(self, type, **kwargs):
+    def __assemble_feature_str(self,*args):
+        return  " ".join([arg.replace("`", "").replace(" ", "").lower() for arg in args])
+
+    def action_check_repeat(self,*args):
+        feature_str=self.__assemble_feature_str(*args)
+        if feature_str in self.actions:
+            return True
+        else:
+            self.actions.add(feature_str)
+            return False
+
+    def __opt_merge_table_get_new_name(self,type,*args):
+        feature_str=self.__assemble_feature_str(*args)
+        try:
+            return self.table_kv[feature_str]
+        except KeyError:
+            name=self.__get_new_name(type)
+            self.table_kv[feature_str]=name
+            return name
+
+    def get_new_name(self,type,*args):
+        if constants.OPT_MERGE_TABLE:
+            return self.__opt_merge_table_get_new_name(type,*args)
+        else:
+            return self.__get_new_name(type)
+
+    def __get_new_name(self, type):
         t_id = self.counters.inc_counter(type)
-        other = None
-        if type == COUNTER_TYPE.PROCEDURE:
-            other = kwargs.get("func_name", None)
-        return f"{type.name.lower()}_{t_id}_{other}" if other else f"{type.name.lower()}_{t_id}"
+        return f"{type.name.lower()}_{t_id}"
+        #other = None
+        #if type == COUNTER_TYPE.PROCEDURE:
+            #other = kwargs.get("func_name", None)
+        #    other=args[0]
+        #return f"{type.name.lower()}_{t_id}_{other}" if other else f"{type.name.lower()}_{t_id}"
 
     def __getfunc(self, name):
         def default_func(node):
@@ -251,6 +287,11 @@ class ASTVisitor:
             policy = self.visit(ps)
             self.policies.append(policy)
         # log_print(f"Generated {len(node.children)} policies.")
+        #print("****************")
+        #print(self.table_kv)
+        #print(self.tables)
+        #print("****************")
+        log_collect(f"Table numbers: {len(self.tables)}","info")
         return self.policies
 
     def visit_PolicyStatement(self, node: ASTNode):
@@ -314,7 +355,8 @@ class ASTVisitor:
                 get_template("PROJ").set_value("PROJ", "*").set_value("TABLE", ctable) for ctable in stack
             ]
             template_union = get_template("UNION_ALL").set_list(condition_sqls)
-            t_names = [self.create_view(template_union, "condition_union", key='id')]
+            t_name=self.get_new_name(COUNTER_TYPE.CONDITION,"UNION_ALL","*",*stack)
+            t_names = [self.create_view(template_union, t_name, key='id')]
 
         self.symbol_table.define(Symbol("condition_table", SYMBOL_TYPE.INTERNAL, {"type": "list", "value": t_names}))
 
@@ -325,7 +367,6 @@ class ASTVisitor:
         return "OR"
 
     def cast_rowtime(self,table,cols:list=()):
-        t_name = self.get_new_name(COUNTER_TYPE.CAST)
 
         cur_table_key = self.symbol_table.resolve(table).attr['key']
         cols_str=''
@@ -338,6 +379,8 @@ class ASTVisitor:
         cast_table_t = get_template("PROJ")\
             .set_value("PROJ", f"{cur_table_key},{cols_str+',' if cols_str else ''} CAST(rowtime AS TIMESTAMP(3)) AS rowtime") \
             .set_value("TABLE", table)
+
+        t_name = self.get_new_name(COUNTER_TYPE.CAST,"PROJ",*cast_table_t.get_key_value())
 
         self.create_view(cast_table_t, t_name, key=cur_table_key)
         return t_name
@@ -357,19 +400,20 @@ class ASTVisitor:
         cur_table_cast=self.cast_rowtime(table,[key])
         cond_table_cast=self.cast_rowtime(t_name)
 
-        template= get_template("SELECT").set_value("PROJ",f"{cur_table_cast}.*") \
-                        .set_value("TABLE",f"{cond_table_cast},{cur_table_cast}") \
-                        .set_value("CONDITION",f"{cond_table_cast}.{key}={cur_table_cast}.{key} AND "
-                                               f"{cur_table_cast}.rowtime >= {cond_table_cast}.rowtime") #BETWEEN {t_name}.rowtime AND {t_name}.rowtime + INTERVAL '1' DAY")
+        PROJ=f"{cur_table_cast}.*"
+        TABLE=f"{cond_table_cast},{cur_table_cast}"
+        CONDITION=f"{cond_table_cast}.{key}={cur_table_cast}.{key} AND {cur_table_cast}.rowtime >= {cond_table_cast}.rowtime"
+        template= get_template("SELECT").set_value("PROJ",PROJ) \
+                        .set_value("TABLE",TABLE) \
+                        .set_value("CONDITION", CONDITION) #BETWEEN {t_name}.rowtime AND {t_name}.rowtime + INTERVAL '1' DAY")
 
-        t_name = self.get_new_name(COUNTER_TYPE.CONDITION)
+        t_name = self.get_new_name(COUNTER_TYPE.CONDITION,"SELECT",*template.get_key_value())
         self.create_view(template, t_name, key=cur_table_key)
 
+        in_body_template=get_template("PROJ").set_value("PROJ", cur_table_key).set_value("TABLE", t_name)
         template = get_template("SELECT_IN").set_value("PROJ", "*").set_value("TABLE", table) \
-           .set_value("IN_COL", cur_table_key).set_value("IN_BODY", get_template("PROJ")
-                                               .set_value("PROJ", cur_table_key)
-                                               .set_value("TABLE", t_name).get_code())
-        t_name=self.get_new_name(COUNTER_TYPE.CONDITION)
+           .set_value("IN_COL", cur_table_key).set_value("IN_BODY",in_body_template.get_code())
+        t_name=self.get_new_name(COUNTER_TYPE.CONDITION,"SELECT_IN","*",table,cur_table_key,cur_table_key,t_name)
         self.create_view(template,t_name,key=cur_table_key)
         return t_name
 
@@ -402,7 +446,8 @@ class ASTVisitor:
                               .set_value("TABLE", et)
                               .get_code() for et in event_tables]
             template_union = get_template("UNION_ALL").set_list(event_sqls)
-            event_tables = [self.create_view(template_union, self.get_new_name(COUNTER_TYPE.EVENT), key='id')]
+            name=self.get_new_name(COUNTER_TYPE.EVENT,"UNION_ALL",'*',*sorted(event_tables))
+            event_tables = [self.create_view(template_union, name, key='id')]
 
         self.symbol_table.define(Symbol("event_table", SYMBOL_TYPE.INTERNAL, {'type': 'list', 'value': event_tables}))
         #self.__update_current_table(event_tables)
@@ -428,7 +473,7 @@ class ASTVisitor:
             #            sql=template_view.get_code()
             #            self.policy.add_sql(sql)
             #            self.symbol_table.define(Symbol(t_name,SYMBOL_TYPE.TABLE,{'q':template_select.get_code()}))
-            t_name = self.get_new_name(COUNTER_TYPE.EVENT)
+            t_name = self.get_new_name(COUNTER_TYPE.EVENT,"SELECT",*template_select.get_key_value())
             self.create_view(template_select, t_name, key='id')
             final_event_table = t_name
         else:
@@ -443,8 +488,16 @@ class ASTVisitor:
 
             event_seq = params['event_list']
             ori_event_name = event_seq[-1]
+            ori_event_table=""
 
             if constants.OPT_UNION_ALL:
+                #t_name = f"{channel}_{ori_event_name}"
+                tselect = get_template("SELECT") \
+                    .set_value("PROJ", "*") \
+                    .set_value("TABLE", bt(ori_event_name)) \
+                    .set_value("CONDITION", f"channel = '{channel}'")
+                ori_event_table=self.get_new_name(COUNTER_TYPE.EVENT,"SELECT",*tselect.get_key_value())
+                self.create_view(tselect, ori_event_table, key='id')
                 t_name="event"
             else:
                 t_name=self.__seq_event_union_all(event_seq,channel)
@@ -462,16 +515,16 @@ class ASTVisitor:
                 .set_value("TIME_UNIT", SEQ_UNIT.name) \
                 .set_value("DEFINE", ','.join([f"{item} AS eventtype='{item}'"
                                                for item in event_seq]))
-            t_name = self.get_new_name(COUNTER_TYPE.EVENT)
+            t_name = self.get_new_name(COUNTER_TYPE.EVENT,"MATCH",*match_template.get_key_value())
             self.create_view(match_template, t_name, key='id')
 
             in_template = get_template("SELECT_IN") \
                 .set_value("PROJ", "*") \
-                .set_value("TABLE", f"{channel}_{event_seq[-1]}") \
+                .set_value("TABLE", ori_event_table) \
                 .set_value("IN_COL", "id") \
                 .set_value("IN_BODY", get_template("PROJ").set_value("PROJ", "id")
                            .set_value("TABLE", t_name).get_code())
-            t_name = self.get_new_name(COUNTER_TYPE.EVENT)
+            t_name = self.get_new_name(COUNTER_TYPE.EVENT,"SELECT_IN","*",f"{channel}_{event_seq[-1]}","id","id","t_name")
             self.create_view(in_template, t_name, key='id')
 
             final_event_table = t_name
@@ -481,13 +534,15 @@ class ASTVisitor:
 
     def __seq_event_union_all(self,event_seq,channel):
         union_list = []
+        union_names=[]
         for event in event_seq:
-            t_name = f"{channel}_{event}"
             tselect = get_template("SELECT") \
                 .set_value("PROJ", "*") \
                 .set_value("TABLE", bt(event)) \
                 .set_value("CONDITION", f"channel = '{channel}'")
+            t_name = self.get_new_name(COUNTER_TYPE.EVENT,*tselect.get_key_value() )
             self.create_view(tselect, t_name, key='id')
+            union_names.append(t_name)
             union_list.append(get_template("PROJ")
                               .set_value("PROJ", f"id,accountnumber,rowtime,eventtype")
                               .set_value("TABLE", bt(t_name))
@@ -496,7 +551,7 @@ class ASTVisitor:
         union_smt = get_template("UNION_ALL").set_list(union_list)
         # t_id = self.counters.inc_counter(COMMON_COUNTER['event'])
         # t_name = f"event_{t_id}"
-        t_name = self.get_new_name(COUNTER_TYPE.EVENT)
+        t_name = self.get_new_name(COUNTER_TYPE.EVENT,"UNION_ALL",f"id,accountnumber,rowtime,eventtype",*sorted(union_names))
         self.create_view(union_smt, t_name, key='id')
         return t_name
 
@@ -579,7 +634,7 @@ class ASTVisitor:
 
         template = get_template("GROUPBY").set_value("PROJ", f"{key}, COUNT(*) AS daycount, MAX(rowtime) AS rowtime") \
             .set_value("TABLE", cond_table).set_value("KEY", key)
-        t_name = self.get_new_name(COUNTER_TYPE.COUNT)
+        t_name = self.get_new_name(COUNTER_TYPE.COUNT,"GROUPBY",*template.get_key_value())
         self.create_view(template, t_name, key=key)
         return t_name, "daycount"
 
@@ -613,13 +668,13 @@ class ASTVisitor:
             #    .set_value("LEFT", lhs[0]).set_value("RIGHT", rhs[0]) \
             #    .set_value("KEY", join_key).set_value("CONDITION", f"{lhs[0]}.`{lhs[1]}` {comp} {rhs[0]}.`{rhs[1]}`") \
             #    .set_value("JOIN_TYPE", "INNER JOIN")
-            t_name = self.get_new_name(COUNTER_TYPE.COMPARISON)
+            t_name = self.get_new_name(COUNTER_TYPE.COMPARISON,"SELECT",*template.get_key_value())
             self.create_view(template, t_name, key=key)
         elif isinstance(lhs, tuple):
             key = self.symbol_table.resolve(lhs[0]).attr['key']
             template = get_template("SELECT").set_value("PROJ", key+", rowtime").set_value("TABLE", lhs[0]) \
                 .set_value("CONDITION", f"`{lhs[1]}` {comp} {rhs}")
-            t_name = self.get_new_name(COUNTER_TYPE.COMPARISON)
+            t_name = self.get_new_name(COUNTER_TYPE.COMPARISON,"SELECT",*template.get_key_value())
             self.create_view(template, t_name, key=key)
         else:
             raise Exception("The left side of comparison must be Query or expression with parameters.")
@@ -638,7 +693,7 @@ class ASTVisitor:
                 .set_value("LEFT", left[0]).set_value("RIGHT", right[0]) \
                 .set_value("KEY", join_key) \
                 .set_value("JOIN_TYPE", "INNER JOIN")
-            t_name = self.get_new_name(COUNTER_TYPE.MATH)
+            t_name = self.get_new_name(COUNTER_TYPE.MATH,"JOIN",*template.get_key_value())
             self.create_view(template, t_name, key=key)
             return t_name, 'result'
         if isinstance(right, tuple):
@@ -650,7 +705,7 @@ class ASTVisitor:
             key = self.symbol_table.resolve(left[0]).attr['key']
             template = get_template("PROJ").set_value("PROJ", f"{key},`{left[1]}` {op} {right} AS `result`") \
                 .set_value("TABLE", left[0])
-            t_name = self.get_new_name(COUNTER_TYPE.MATH)
+            t_name = self.get_new_name(COUNTER_TYPE.MATH,"PROJ",*template.get_key_value())
             self.create_view(template, t_name, key=key)
             return t_name, 'result'
 
@@ -772,7 +827,7 @@ class BuiltInFuncs:
 
     # Procedure for each builtin function
     @classmethod
-    def __insert_table(cls, t_name, params, visitor):
+    def __insert_table(cls, t_name, params, visitor:ASTVisitor):
         try:
             cond_tables = visitor.symbol_table.resolve("condition_table").attr['value']
         except KeyError:
@@ -783,7 +838,8 @@ class BuiltInFuncs:
                 .set_value("CONTENT", get_template("PROJ")
                            .set_value("PROJ", proj)
                            .set_value("TABLE", cond_table).get_code())
-            visitor.add_policy_sql(template)
+            if not visitor.action_check_repeat(t_name,proj,cond_table):
+                visitor.add_policy_sql(template)
 
     @classmethod
     def alert(cls, params, visitor):
@@ -809,11 +865,11 @@ class BuiltInFuncs:
             log_collect(f"TOTALDEBIT: {params[1]['value']} is truncated to {int(params[1]['value'])}",'warning')
         interval = int(params[1]['value'])
         daycount = int(params[2]['value'])
-        t_name = visitor.get_new_name(COUNTER_TYPE.PROCEDURE, func_name='totaldebit')
         template = get_template("WINDOW").set_value("PROJ", "accountnumber, SUM(`value`) AS totaldebit") \
             .set_value("TABLE", table_name) \
             .set_value("KEY", "accountnumber") \
             .set_value("INTERVAL", f"'{interval}' DAY")
+        t_name = visitor.get_new_name(COUNTER_TYPE.PROCEDURE, "WINDOW",*template.get_key_value())
         visitor.create_view(template, t_name, key='accountnumber')
         #template=get_template("SELECT").set_value("PROJ", "accountnumber, totaldebit, rowtime")\
         #                .set_value("TABLE",t_name)\
@@ -823,7 +879,7 @@ class BuiltInFuncs:
             .set_value("ORDER", "rowtime") \
             .set_value("TABLE", t_name) \
             .set_value("CONDITION", f'<= {daycount}')
-        t_name = visitor.get_new_name(COUNTER_TYPE.PROCEDURE, func_name='totaldebit')
+        t_name = visitor.get_new_name(COUNTER_TYPE.PROCEDURE, *template.get_key_value())
         visitor.create_view(template, t_name, key='accountnumber')
         return t_name, 'totaldebit'
 
@@ -835,7 +891,7 @@ class BuiltInFuncs:
             raise Exception("Current table not defined")
         template = get_template("GROUPBY").set_value("PROJ", "accountnumber,BADACCOUNT(accountnumber) AS isbad") \
             .set_value("TABLE", cur_table).set_value("KEY", "accountnumber")
-        new_table = visitor.create_view(template, visitor.get_new_name(COUNTER_TYPE.PROCEDURE, func_name='badaccount'),
+        new_table = visitor.create_view(template, visitor.get_new_name(COUNTER_TYPE.PROCEDURE, *template.get_key_value()),
                                         key="accountnumber")
         return new_table, "isbad"
 

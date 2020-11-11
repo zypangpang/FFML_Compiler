@@ -178,6 +178,12 @@ class MyTemplate:
         self.__emtpy_dict[empty]=val
         return self
 
+    def get_key_dict(self):
+        return self.__emtpy_dict
+
+    def get_key_value(self):
+        return self.__emtpy_dict.values()
+
     def get_code(self):
         code: str=self.meta_str
         for empty,val in self.__emtpy_dict.items():

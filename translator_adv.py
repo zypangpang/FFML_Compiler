@@ -385,6 +385,21 @@ class ASTVisitor:
         self.create_view(cast_table_t, t_name, key=cur_table_key)
         return t_name
 
+    def __cast_join(self,table,key,t_name,cur_table_key):
+        cur_table_cast = self.cast_rowtime(table, [key])
+        cond_table_cast = self.cast_rowtime(t_name)
+
+        PROJ = f"{cur_table_cast}.*"
+        TABLE = f"{cond_table_cast},{cur_table_cast}"
+        CONDITION = f"{cond_table_cast}.{key}={cur_table_cast}.{key} AND {cur_table_cast}.rowtime >= {cond_table_cast}.rowtime"
+        template = get_template("SELECT").set_value("PROJ", PROJ) \
+            .set_value("TABLE", TABLE) \
+            .set_value("CONDITION", CONDITION)  # BETWEEN {t_name}.rowtime AND {t_name}.rowtime + INTERVAL '1' DAY")
+
+        t_name = self.get_new_name(COUNTER_TYPE.CONDITION, "SELECT", *template.get_key_value())
+        self.create_view(template, t_name, key=cur_table_key)
+        return t_name
+
     # @log_info
     def visit_SingleCondition(self, node: ASTNode):
         lhs: tuple = self.visit(node.children[0])
@@ -397,18 +412,9 @@ class ASTVisitor:
             cur_table_key=self.symbol_table.resolve(table).attr['key']
         except KeyError:
             raise Exception("Current table undefined or get key failed")
-        cur_table_cast=self.cast_rowtime(table,[key])
-        cond_table_cast=self.cast_rowtime(t_name)
 
-        PROJ=f"{cur_table_cast}.*"
-        TABLE=f"{cond_table_cast},{cur_table_cast}"
-        CONDITION=f"{cond_table_cast}.{key}={cur_table_cast}.{key} AND {cur_table_cast}.rowtime >= {cond_table_cast}.rowtime"
-        template= get_template("SELECT").set_value("PROJ",PROJ) \
-                        .set_value("TABLE",TABLE) \
-                        .set_value("CONDITION", CONDITION) #BETWEEN {t_name}.rowtime AND {t_name}.rowtime + INTERVAL '1' DAY")
-
-        t_name = self.get_new_name(COUNTER_TYPE.CONDITION,"SELECT",*template.get_key_value())
-        self.create_view(template, t_name, key=cur_table_key)
+        if not constants.OPT_UDF:
+            t_name=self.__cast_join(table,key,t_name,cur_table_key)
 
         in_body_template=get_template("PROJ").set_value("PROJ", cur_table_key).set_value("TABLE", t_name)
         template = get_template("SELECT_IN").set_value("PROJ", "*").set_value("TABLE", table) \
@@ -851,6 +857,38 @@ class BuiltInFuncs:
 
     @classmethod
     def totaldebit(cls, params, visitor: ASTVisitor):
+        if constants.OPT_UDF:
+            return cls.__totaldebit_udf(params,visitor)
+        else:
+            return cls.__totaldebit_stream(params,visitor)
+
+    @classmethod
+    def __totaldebit_udf(cls, params, visitor: ASTVisitor):
+        try:
+            cur_table = visitor.symbol_table.resolve("current_table").attr['value']
+        except KeyError:
+            raise Exception("Current table not defined")
+
+        if not params[1]['value'].is_integer():
+            log_collect(f"TOTALDEBIT: {params[1]['value']} is truncated to {int(params[1]['value'])}", 'warning')
+            # logging.warning(f"TOTALDEBIT: {params[1]['value']} is truncated to {int(params[1]['value'])}")
+
+        channels = [params[0]['value']] if params[0]['type'] == "Channel" else params[0]['value']
+        interval = int(params[1]['value'])
+        daycount = int(params[2]['value'])
+
+        template = get_template("PROJ").set_value("PROJ", "S.id,T.v as totaldebit") \
+            .set_value("TABLE", f"{cur_table} as S, LATERAL TABLE(TOTALDEBIT(accountnumber,"
+                                f"'{','.join(channels)}',{interval},{daycount})) as T(v)")
+
+        # template = get_template("PROJ").set_value("PROJ", f"*,TOTALDEBIT(accountnumber,{'_'.join(channels)}, {interval}) AS totaldebit") \
+        #    .set_value("TABLE", cur_table)#.set_value("KEY", "accountnumber")
+        new_table = visitor.create_view(template, visitor.get_new_name(COUNTER_TYPE.PROCEDURE,*template.get_key_value()),
+                                        key="id")
+        return new_table, "totaldebit"
+
+    @classmethod
+    def __totaldebit_stream(cls, params, visitor: ASTVisitor):
         channels=[params[0]['value']] if params[0]['type'] == "Channel" else params[0]['value']
         table_name = '_'.join(channels) + "_transfer"
         try:

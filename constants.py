@@ -75,6 +75,7 @@ GUI=[False]
 OPT_UNION_ALL=True
 OPT_MERGE_TABLE=True
 OPT_UDF=True
+OPT_RETRACT=True
 OPT_FLINK_CONF=True
 # -------------------------------------------
 

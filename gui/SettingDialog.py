@@ -27,6 +27,7 @@ class SettingDialog(QtWidgets.QDialog):
         self.compiler_widgets[configs.SEQ_TIME] = self.ui.seq_time_box
         self.compiler_widgets[configs.TIME_UNIT] = self.ui.time_unit_box
         self.compiler_widgets[configs.LOG_FILE_PATH] = self.ui.log_file_edit
+        self.compiler_widgets[configs.OPT_LEVEL]=self.ui.opt_level_box
         # ide
         self.ide_widgets[configs.OUT_FILE_PATH] = self.ui.out_file_edit
         self.ide_widgets[configs.FONT_SIZE] = self.ui.font_size_box

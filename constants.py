@@ -88,10 +88,18 @@ GEN_JAVA=False
 translator_configs={
     'SEQ_UNIT':TIME_UNIT.SECOND,
     'SEQ_TIME':5,
+    'OPT_LEVEL':0,
+    #'OPT_UNION_ALL':True,
+    #'OPT_MERGE_TABLE':True,
+    #'OPT_UDF':True,
+    #'OPT_RETRACT':True,
 }
 
 def get_config_value(key):
     return translator_configs[key]
+
+def set_config_value(key,val):
+    translator_configs[key]=val
 # Translator related
 #SEQ_UNIT=TIME_UNIT.SECOND
 #SEQ_TIME=5

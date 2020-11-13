@@ -120,9 +120,11 @@ class MainWindow(QtWidgets.QMainWindow):
         return self.file_modified or self.code_doc.isModified()
 
     def load_settings(self):
-        constants.translator_configs['SEQ_UNIT']=gconstant.configs.get_time_unit()
-        constants.translator_configs['SEQ_TIME']=gconstant.configs.get_compiler_value(gconstant.configs.SEQ_TIME)
+        constants.set_config_value('SEQ_UNIT',gconstant.configs.get_time_unit())
+        constants.set_config_value('SEQ_TIME',gconstant.configs.get_compiler_value(gconstant.configs.SEQ_TIME))
+        constants.set_config_value('OPT_LEVEL',int(gconstant.configs.get_compiler_value(gconstant.configs.OPT_LEVEL)))
         #constants.translator_configs['LOG_FILE']=gconstant.configs.get_compiler_value(gconstant.configs.LOG_FILE_PATH)
+
         font_size=int(gconstant.configs.get_ide_value(gconstant.configs.FONT_SIZE))
 
         #font = self.code_edit.currentFont()

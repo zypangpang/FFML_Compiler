@@ -19,6 +19,7 @@ class GuiConfigs():
     SEQ_TIME = 'seq time'
     LOG_FILE_PATH='log file path'
     #HTTP_HOST = "http host"
+    OPT_LEVEL='opt level'
 
     OUT_FILE_PATH='out file path'
     FONT_SIZE='font size'
@@ -33,9 +34,10 @@ class GuiConfigs():
         #index_folder = DEFAULT_CONFIG_PATH.parent.joinpath("index")
         configs = configparser.ConfigParser()
         configs[COMPILER_SECTION] = {
-            cls.TIME_UNIT: constants.translator_configs['SEQ_UNIT'].name,
-            cls.SEQ_TIME: constants.translator_configs['SEQ_TIME'],
-            cls.LOG_FILE_PATH: constants.translator_configs['LOG_FILE'],
+            cls.TIME_UNIT: constants.get_config_value('SEQ_UNIT').name,
+            cls.SEQ_TIME: constants.get_config_value('SEQ_TIME'),
+            cls.LOG_FILE_PATH: constants.get_config_value('LOG_FILE'),
+            cls.OPT_LEVEL: constants.get_config_value('OPT_LEVEL'),
         }
         configs[IDE_SECTION] = {
             cls.OUT_FILE_PATH: gconstants.DEFAULT_OUTPUT_PATH,

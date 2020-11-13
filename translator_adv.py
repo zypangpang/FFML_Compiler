@@ -3,7 +3,7 @@ import re
 from typing import List
 
 import constants
-from constants import SYMBOL_TYPE, COUNTER_TYPE, translator_configs,  PREDEFINED_EVENTS, TIME_UNIT
+from constants import SYMBOL_TYPE, COUNTER_TYPE, PREDEFINED_EVENTS, TIME_UNIT
 from parser import ASTNode
 from utils import MyTemplate, bt, ListTemplate, log_info,log_collect
 #from functools import reduce
@@ -13,13 +13,20 @@ Symbol Attr Memo:
 Policy: obj
 
 """
-SEQ_TIME=None
-SEQ_UNIT=None
+
+def set_opt_vars(level):
+    global OPT_UNION_ALL, OPT_MERGE_TABLE, OPT_UDF, OPT_RETRACT
+    OPT_UNION_ALL = True if level > 0 else False
+    OPT_MERGE_TABLE = True if level >1  else False
+    OPT_UDF = True if level >2 else False
+    OPT_RETRACT = True if level >3 else False
 
 def get_configs():
     global SEQ_TIME,SEQ_UNIT
-    SEQ_TIME = translator_configs['SEQ_TIME']
-    SEQ_UNIT = translator_configs['SEQ_UNIT']
+    SEQ_TIME = constants.get_config_value('SEQ_TIME')
+    SEQ_UNIT = constants.get_config_value('SEQ_UNIT')
+    OPT_LEVEL= int(constants.get_config_value('OPT_LEVEL'))
+    set_opt_vars(OPT_LEVEL)
 
 
 class Symbol:
@@ -168,7 +175,10 @@ MATCH_RECOGNIZE (
 )"""),
         "SELECT_IN": MyTemplate("SELECT $PROJ$ FROM $TABLE$ WHERE $IN_COL$ IN ( $IN_BODY$ )"),
         "GROUPBY": MyTemplate("""SELECT $PROJ$ FROM $TABLE$ GROUP BY $KEY$"""),
-        "WINDOW": MyTemplate("""SELECT $PROJ$,TUMBLE_END(rowtime, INTERVAL $INTERVAL$) AS rowtime 
+        "WINDOW": MyTemplate("""SELECT $PROJ$ 
+    FROM $TABLE$ 
+    GROUP BY $KEY$,TUMBLE($TIME_KEY$, INTERVAL $INTERVAL$)"""),
+        "WINDOW_WITH_END": MyTemplate("""SELECT $PROJ$, TUMBLE_END(rowtime, INTERVAL $INTERVAL$) AS rowtime 
 FROM $TABLE$ 
 GROUP BY $KEY$,TUMBLE(rowtime, INTERVAL $INTERVAL$)"""),
         "TOPN": MyTemplate("""SELECT $PROJ$ FROM
@@ -251,7 +261,7 @@ class ASTVisitor:
             return name
 
     def get_new_name(self,type,*args):
-        if constants.OPT_MERGE_TABLE:
+        if OPT_MERGE_TABLE:
             return self.__opt_merge_table_get_new_name(type,*args)
         else:
             return self.__get_new_name(type)
@@ -278,10 +288,10 @@ class ASTVisitor:
             return default_func
 
     def visit(self, node, **kwargs):
-        get_configs()
         return self.__getfunc(node.type)(node, **kwargs)
 
     def visit_PolicyList(self, node: ASTNode):
+        get_configs()
         for ps in node.children:
             self.__reset_policy()
             policy = self.visit(ps)
@@ -328,7 +338,7 @@ class ASTVisitor:
         return condition_tables
 
     def visit_ConditionStatement(self, node: ASTNode):
-        if constants.OPT_UNION_ALL:
+        if OPT_UNION_ALL:
             stack=self.__opt_unionall_condition_tables(node)
         else:
             stack = []
@@ -348,7 +358,7 @@ class ASTVisitor:
                 stack.append(self.visit(node.children[i + 1]))
                 i += 2
 
-        if constants.OPT_UNION_ALL:
+        if OPT_UNION_ALL:
             t_names=stack
         else:
             condition_sqls = [
@@ -413,7 +423,7 @@ class ASTVisitor:
         except KeyError:
             raise Exception("Current table undefined or get key failed")
 
-        if not constants.OPT_UDF:
+        if not OPT_UDF:
             t_name=self.__cast_join(table,key,t_name,cur_table_key)
 
         in_body_template=get_template("PROJ").set_value("PROJ", cur_table_key).set_value("TABLE", t_name)
@@ -446,7 +456,7 @@ class ASTVisitor:
                 raise Exception("The last event of all event conditions need to be identical")
         self.symbol_table.define(Symbol("event", SYMBOL_TYPE.INTERNAL, {'type': 'str', 'value': events[0]}))
 
-        if not constants.OPT_UNION_ALL:
+        if not OPT_UNION_ALL:
             event_sqls = [get_template("PROJ")
                               .set_value("PROJ", "*")
                               .set_value("TABLE", et)
@@ -496,7 +506,7 @@ class ASTVisitor:
             ori_event_name = event_seq[-1]
             ori_event_table=""
 
-            if constants.OPT_UNION_ALL:
+            if OPT_UNION_ALL:
                 #t_name = f"{channel}_{ori_event_name}"
                 tselect = get_template("SELECT") \
                     .set_value("PROJ", "*") \
@@ -638,8 +648,21 @@ class ASTVisitor:
         cond_table, key = self.visit(node.children[1])
         self.symbol_table.resolve("hist_days").attr['value'] = 1
 
-        template = get_template("GROUPBY").set_value("PROJ", f"{key}, COUNT(*) AS daycount, MAX(rowtime) AS rowtime") \
-            .set_value("TABLE", cond_table).set_value("KEY", key)
+        if OPT_UDF:
+            if OPT_RETRACT:
+                template = get_template("WINDOW").set_value("PROJ", f"{key},MAX(rowtime) AS rowtime,COUNT(*) AS daycount") \
+                    .set_value("TABLE", cond_table) \
+                    .set_value("KEY", key) \
+                    .set_value("TIME_KEY","rowtime") \
+                    .set_value("INTERVAL", f"'1' SECOND")
+                #template = get_template("GROUPBY").set_value("PROJ", f"{key}, COUNT(*) AS daycount") \
+                #    .set_value("TABLE", cond_table).set_value("KEY", key)
+            else:
+                template = get_template("GROUPBY").set_value("PROJ", f"{key},rowtime,COUNT(*) AS daycount") \
+                    .set_value("TABLE", cond_table).set_value("KEY", key)
+        else:
+            template = get_template("GROUPBY").set_value("PROJ", f"{key}, COUNT(*) AS daycount, MAX(rowtime) AS rowtime") \
+                .set_value("TABLE", cond_table).set_value("KEY", key)
         t_name = self.get_new_name(COUNTER_TYPE.COUNT,"GROUPBY",*template.get_key_value())
         self.create_view(template, t_name, key=key)
         return t_name, "daycount"
@@ -857,7 +880,7 @@ class BuiltInFuncs:
 
     @classmethod
     def totaldebit(cls, params, visitor: ASTVisitor):
-        if constants.OPT_UDF:
+        if OPT_UDF:
             return cls.__totaldebit_udf(params,visitor)
         else:
             return cls.__totaldebit_stream(params,visitor)
@@ -877,7 +900,7 @@ class BuiltInFuncs:
         interval = int(params[1]['value'])
         daycount = int(params[2]['value'])
 
-        template = get_template("PROJ").set_value("PROJ", "S.id,T.v as totaldebit") \
+        template = get_template("PROJ").set_value("PROJ", "S.id,S.rowtime,T.v as totaldebit") \
             .set_value("TABLE", f"{cur_table} as S, LATERAL TABLE(TOTALDEBIT(accountnumber,"
                                 f"'{','.join(channels)}',{interval},{daycount})) as T(v)")
 
@@ -903,11 +926,11 @@ class BuiltInFuncs:
             log_collect(f"TOTALDEBIT: {params[1]['value']} is truncated to {int(params[1]['value'])}",'warning')
         interval = int(params[1]['value'])
         daycount = int(params[2]['value'])
-        template = get_template("WINDOW").set_value("PROJ", "accountnumber, SUM(`value`) AS totaldebit") \
+        template = get_template("WINDOW_WITH_END").set_value("PROJ", "accountnumber, SUM(`value`) AS totaldebit") \
             .set_value("TABLE", table_name) \
             .set_value("KEY", "accountnumber") \
             .set_value("INTERVAL", f"'{interval}' DAY")
-        t_name = visitor.get_new_name(COUNTER_TYPE.PROCEDURE, "WINDOW",*template.get_key_value())
+        t_name = visitor.get_new_name(COUNTER_TYPE.PROCEDURE, "WINDOW_WITH_END",*template.get_key_value())
         visitor.create_view(template, t_name, key='accountnumber')
         #template=get_template("SELECT").set_value("PROJ", "accountnumber, totaldebit, rowtime")\
         #                .set_value("TABLE",t_name)\

@@ -23,6 +23,7 @@ class GuiConfigs():
 
     OUT_FILE_PATH='out file path'
     FONT_SIZE='font size'
+    EDITOR='external editor'
 
 
     @classmethod
@@ -42,6 +43,7 @@ class GuiConfigs():
         configs[IDE_SECTION] = {
             cls.OUT_FILE_PATH: gconstants.DEFAULT_OUTPUT_PATH,
             cls.FONT_SIZE:gconstants.DEFAULT_FONT_SIZE,
+            cls.EDITOR:gconstants.DEFAULT_EXTERNAL_EDITOR,
         }
         with open(file_path, "w") as f:
             configs.write(f)

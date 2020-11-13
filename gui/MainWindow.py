@@ -1,3 +1,5 @@
+import subprocess
+
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QKeySequence, QIcon, QTextDocument, QFont, QFontDatabase
 from PyQt5.QtCore import Qt, QUrl
@@ -92,6 +94,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.build_menu.addAction("Parse",self.parse,QKeySequence(Qt.CTRL+Qt.Key_P))
         self.build_menu.addAction("Compile", self.compile, QKeySequence(Qt.CTRL + Qt.Key_B))
+        self.build_menu.addAction("View", self.view_compiled)
 
     def __init_toolbar(self):
         self.toolbar=self.addToolBar("Tool")
@@ -232,6 +235,14 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             self.show_log(get_log_list() + ["Compiling succeed. No error reported"])
         self.show_message("Compiling finished")
+
+    def view_compiled(self):
+        if not self.out_file_name:
+            self.show_message("No output file found")
+            return
+        command = [gconstant.configs.get_ide_value(gconstant.configs.EDITOR), self.out_file_name]
+        # os.system(SOUND_PLAYER+" "+str(Path(data_folder).joinpath(item)))
+        subprocess.Popen(command)
 
 
     def show_setting_dialog(self):

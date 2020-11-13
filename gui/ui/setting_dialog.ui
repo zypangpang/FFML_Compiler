@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>431</width>
-    <height>398</height>
+    <width>435</width>
+    <height>421</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -23,7 +23,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>350</y>
+     <y>380</y>
      <width>411</width>
      <height>31</height>
     </rect>
@@ -41,7 +41,7 @@
      <x>10</x>
      <y>10</y>
      <width>411</width>
-     <height>324</height>
+     <height>364</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -233,20 +233,17 @@
     </item>
     <item>
      <layout class="QGridLayout" name="gridLayout">
-      <item row="2" column="0">
-       <widget class="QLabel" name="bg_label_7">
-        <property name="text">
-         <string>Font size</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QLineEdit" name="out_file_edit"/>
-      </item>
       <item row="1" column="0">
        <widget class="QLabel" name="bg_label_6">
         <property name="text">
          <string>Out file path</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="bg_label_7">
+        <property name="text">
+         <string>Font size</string>
         </property>
        </widget>
       </item>
@@ -259,6 +256,19 @@
          <number>50</number>
         </property>
        </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="out_file_edit"/>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="bg_label_8">
+        <property name="text">
+         <string>Editor</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QLineEdit" name="editor_edit"/>
       </item>
      </layout>
     </item>

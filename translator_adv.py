@@ -21,6 +21,9 @@ def set_opt_vars(level):
     OPT_UDF = True if level >2 else False
     OPT_RETRACT = True if level >3 else False
 
+    #OPT_UNION_ALL=False
+    OPT_UDF=False
+
 def get_configs():
     global SEQ_TIME,SEQ_UNIT
     SEQ_TIME = constants.get_config_value('SEQ_TIME')
@@ -504,7 +507,6 @@ class ASTVisitor:
 
             event_seq = params['event_list']
             ori_event_name = event_seq[-1]
-            ori_event_table=""
 
             if OPT_UNION_ALL:
                 #t_name = f"{channel}_{ori_event_name}"
@@ -516,7 +518,7 @@ class ASTVisitor:
                 self.create_view(tselect, ori_event_table, key='id')
                 t_name="event"
             else:
-                t_name=self.__seq_event_union_all(event_seq,channel)
+                t_name,ori_event_table=self.__seq_event_union_all(event_seq,channel)
 
 
             #bt_event_seq = bt(event_seq)
@@ -569,7 +571,7 @@ class ASTVisitor:
         # t_name = f"event_{t_id}"
         t_name = self.get_new_name(COUNTER_TYPE.EVENT,"UNION_ALL",f"id,accountnumber,rowtime,eventtype",*sorted(union_names))
         self.create_view(union_smt, t_name, key='id')
-        return t_name
+        return t_name,union_names[-1]
 
     def visit_Channel(self, node: ASTNode):
         # log_print("visit Channel")

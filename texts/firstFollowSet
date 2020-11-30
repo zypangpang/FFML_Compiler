@@ -1,0 +1,107 @@
+======================================================================
+START SYMBOL
+----------------------------------------------------------------------
+PolicyList
+______________________________________________________________________
+======================================================================
+SYMBOL		FIRST SET
+----------------------------------------------------------------------
+PolicyId 	 {'POLICYID'}
+PolicyStatement 	 {'POLICYID'}
+PolicyList 	 {'POLICYID'}
+I_A 	 {'#', 'POLICYID'}
+ConditionStatement 	 {'IF'}
+I_B 	 {'#', 'IF'}
+LogicalOr 	 {'OR'}
+I_C 	 {'#', 'OR'}
+EventStatement 	 {'ON'}
+Channel 	 {'CHQ', 'CNP', 'CP', 'ONL', 'OTH', 'DD', 'ATM'}
+SingleEvent 	 {'CHQ', 'CNP', 'ONL', 'OTH', 'CP', 'DD', 'ATM'}
+Sequence 	 {'SEQ'}
+EventList 	 {'SEQ', '['}
+I_D 	 {'#', '('}
+I_E 	 {'#', ','}
+Instance 	 {'<ID>'}
+LogicalAnd 	 {'AND'}
+LogicalOperator 	 {'AND', 'OR'}
+I_F 	 {'#', 'AND', 'OR'}
+Boolean 	 {'FALSE', 'TRUE'}
+EventParameter 	 {'<ID>'}
+IntegerLiteral 	 {'<DIGITS>'}
+String 	 {'<STRING>'}
+Factors 	 {'<DIGITS>', '<ID>', 'FALSE', '<STRING>', 'TRUE', '('}
+FactorExpression1 	 {'<DIGITS>', '<ID>', 'FALSE', '<STRING>', 'TRUE', '('}
+Query 	 {'QUERY'}
+AdditiveExpression1 	 {'<DIGITS>', 'QUERY', '<ID>', 'FALSE', '<STRING>', 'TRUE', '('}
+HistoryStatement 	 {'HISTORY'}
+SingleCondition 	 {'<DIGITS>', 'QUERY', '<ID>', 'HISTORY', 'FALSE', '<STRING>', 'TRUE', '('}
+FactorExpression2 	 {'/', '*'}
+I_G 	 {'#', '*', '/'}
+AdditiveExpression2 	 {'-', '+'}
+I_H 	 {'#', '-', '+'}
+StoredProcedure 	 {'<ID>'}
+I_I 	 {'#', ','}
+ChannelList 	 {'CHQ', 'CNP', '(', 'ONL', 'OTH', 'CP', 'DD', 'ATM'}
+ParamInput 	 {'CHQ', '<DIGITS>', 'ONL', 'OTH', 'DD', '(', 'CNP', '<ID>', 'CP', 'ATM'}
+Parameters 	 {'CHQ', '<DIGITS>', 'ONL', 'OTH', 'DD', '(', 'CNP', '<ID>', 'CP', 'ATM'}
+I_J 	 {'#', ','}
+HistInput 	 {'('}
+I_K 	 {'#', 'AND'}
+ActionStatement 	 {'THEN'}
+I_L 	 {'CHQ', '<DIGITS>', 'ONL', 'OTH', '#', 'DD', '(', 'CNP', '<ID>', 'CP', 'ATM'}
+Procedure 	 {'<ID>'}
+Comparison 	 {'>', '<=', '>=', '!=', '<', '='}
+Event 	 {'<ID>'}
+F_A 	 {'#', '.'}
+______________________________________________________________________
+======================================================================
+SYMBOL		FOLLOW SET
+----------------------------------------------------------------------
+PolicyList 	 {'$'}
+I_A 	 {'$'}
+I_B 	 {'THEN'}
+PolicyStatement 	 {'$', 'POLICYID'}
+PolicyId 	 {'ON'}
+I_C 	 {'THEN', 'IF'}
+EventStatement 	 {'THEN', 'IF'}
+SingleEvent 	 {'THEN', 'IF', 'OR'}
+Channel 	 {'CHQ', 'ONL', 'DD', '[', 'SEQ', 'CP', 'ATM', '<DIGITS>', 'OTH', '(', ',', ')', 'CNP', '<ID>'}
+EventList 	 {'THEN', 'IF', 'OR'}
+I_D 	 {'['}
+I_E 	 {']'}
+Sequence 	 {'THEN', 'IF', 'OR'}
+Instance 	 {'('}
+I_F 	 {'THEN'}
+ConditionStatement 	 {'THEN'}
+LogicalOperator 	 {'<DIGITS>', 'HISTORY', 'FALSE', '<STRING>', '(', '<ID>', 'QUERY', 'TRUE'}
+SingleCondition 	 {'AND', 'THEN', 'OR'}
+I_G 	 {'>', '<=', '>=', 'AND', '<', 'OR', '=', '-', '+', 'THEN', ')', '!=', ']'}
+I_H 	 {'>', '<=', '>=', 'AND', '<', 'OR', '=', 'THEN', ')', '!=', ']'}
+AdditiveExpression1 	 {']', '>', '<=', '>=', 'AND', '=', 'THEN', ')', 'OR', '!=', '<'}
+AdditiveExpression2 	 {'>', '<=', '>=', 'AND', '<', 'OR', '=', 'THEN', ')', '!=', ']'}
+FactorExpression1 	 {'>', '<=', '>=', 'AND', '<', 'OR', '=', '-', '+', 'THEN', ')', '!=', ']'}
+FactorExpression2 	 {'>', '<=', '>=', 'AND', '<', 'OR', '=', '-', '+', 'THEN', ')', '!=', ']'}
+Factors 	 {'>', '<=', '>=', 'AND', 'OR', '=', ']', '+', '-', '/', 'THEN', ')', '*', '!=', '<'}
+IntegerLiteral 	 {'>', 'ONL', 'CP', 'OTH', '<ID>', '*', '!=', '<', 'CHQ', '<=', '>=', 'AND', 'DD', 'OR', '=', '-', '+', 'ATM', '<DIGITS>', '(', '/', 'THEN', ')', ',', 'CNP', ']'}
+Boolean 	 {'>', '<=', '>=', 'AND', 'OR', '=', ']', '+', '-', '/', 'THEN', ')', '*', '!=', '<'}
+String 	 {'>', '<=', '>=', 'AND', '<', 'OR', '=', '-', '+', '/', 'THEN', ')', '*', '!=', ']'}
+Query 	 {'>', '<=', '>=', 'AND', '<', 'OR', '=', '-', '+', '/', 'THEN', ')', '*', '!=', ']'}
+StoredProcedure 	 {'>', '<=', '>=', 'AND', '<', 'OR', '=', '-', '+', '/', 'THEN', ')', '*', '!=', ']'}
+I_I 	 {'CHQ', '<DIGITS>', 'ONL', 'OTH', 'DD', '(', 'CNP', ')', '<ID>', 'CP', 'ATM'}
+Parameters 	 {'CHQ', '<DIGITS>', 'ONL', 'OTH', 'DD', '(', 'CNP', ')', '<ID>', 'CP', 'ATM'}
+ParamInput 	 {'CHQ', 'ONL', 'DD', 'CP', 'ATM', '<DIGITS>', 'OTH', '(', ',', 'CNP', ')', '<ID>'}
+I_J 	 {')'}
+ChannelList 	 {'CHQ', 'ONL', 'DD', 'CP', 'ATM', '<DIGITS>', 'OTH', '(', ',', 'CNP', ')', '<ID>'}
+HistoryStatement 	 {'!=', '<', '>', '<=', '>=', '='}
+HistInput 	 {'!=', '<', '>', '<=', '>=', '='}
+I_K 	 {';'}
+ActionStatement 	 {';'}
+I_L 	 {')'}
+Procedure 	 {'AND', ';'}
+LogicalAnd 	 {'<DIGITS>', 'HISTORY', 'FALSE', '<STRING>', '(', '<ID>', 'QUERY', 'TRUE'}
+LogicalOr 	 {'CHQ', '<DIGITS>', 'HISTORY', 'ONL', 'OTH', 'DD', 'FALSE', '<STRING>', '(', 'CNP', '<ID>', 'CP', 'QUERY', 'TRUE', 'ATM'}
+Comparison 	 {'<DIGITS>', 'FALSE', '<STRING>', '(', '<ID>', 'QUERY', 'TRUE'}
+EventParameter 	 {'>', 'ONL', 'CP', 'OTH', '<ID>', '*', '!=', '<', 'CHQ', '<=', '>=', 'AND', 'DD', 'OR', '=', '-', '+', 'ATM', '<DIGITS>', '(', '/', 'THEN', ')', ',', 'CNP', ']'}
+Event 	 {']', ','}
+F_A 	 {'>', 'ONL', 'CP', 'OTH', '<ID>', '*', '!=', '<', 'CHQ', '<=', '>=', 'AND', 'DD', 'OR', '=', '-', '+', 'ATM', '<DIGITS>', '(', '/', 'THEN', ')', ',', 'CNP', ']'}
+______________________________________________________________________

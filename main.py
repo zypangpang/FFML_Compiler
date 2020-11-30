@@ -3,7 +3,7 @@ import sys,fire,logging.config
 from log_config import logging_config
 logging.config.dictConfig(logging_config)
 
-from utils import out_tree,SyntaxError,LexicalError,log_collect
+from utils import out_tree, SyntaxError, LexicalError, log_collect, format_print, print_dict
 from grammar_related import get_grammar_from_file, left_factoring, get_production_map,get_all_terms,get_all_productions
 from first_follow_set import FirstFollowSet
 from constants import EMPTY
@@ -21,21 +21,21 @@ def check_nullable(ff: FirstFollowSet):
         if EMPTY in first_set[A]:
             print(A)
 
-def get_parse_table(grammar):
-     grammar = left_factoring(grammar)
+def get_parse_table(grammar,start_symbol):
+     #grammar = left_factoring(grammar)
      ff = FirstFollowSet(grammar=grammar, ss=start_symbol)
-     #first_set = ff.first_set()
-     #follow_set = ff.follow_set()
+     first_set = ff.first_set()
+     follow_set = ff.follow_set()
 
-     #format_print(print, "start symbol")(start_symbol)
-     #format_print(print_dict, "first set", True)(first_set)
-     #format_print(print_dict, "follow set", True)(follow_set)
+     format_print(print, "start symbol")(start_symbol)
+     format_print(print_dict, "first set", True)(first_set)
+     format_print(print_dict, "follow set", True)(follow_set)
      #print_seperator(print_set, "addto")(global_addto_follow)
 
      #print(ff.check_LL1())
 
-     M = ff.get_parse_table()
-     return M
+     #M = ff.get_parse_table()
+     #return M
      #p_map = get_production_map(grammar)
      #for X in M:
      #   print(f"{X}:")
@@ -143,3 +143,7 @@ class Main:
 if __name__ == '__main__':
     logging.info("FFML translator started.")
     fire.Fire(Main)
+
+    #path = "texts/grammar_LL1.txt"
+    #start_symbol, grammar = get_grammar_from_file('BNF', path, '|', ';')
+    #get_parse_table(grammar,start_symbol)

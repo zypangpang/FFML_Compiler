@@ -5,7 +5,7 @@ from typing import List
 import constants
 from constants import SYMBOL_TYPE, COUNTER_TYPE, PREDEFINED_EVENTS, TIME_UNIT
 from parser import ASTNode
-from utils import MyTemplate, bt, ListTemplate, log_info,log_collect
+from utils import MyTemplate, bt, ListTemplate, log_info, log_collect
 #from functools import reduce
 
 """
@@ -22,7 +22,7 @@ def set_opt_vars(level):
     OPT_RETRACT = True if level >3 else False
 
     #OPT_UNION_ALL=False
-    OPT_UDF=False
+    #OPT_UDF=False
 
 def get_configs():
     global SEQ_TIME,SEQ_UNIT
@@ -482,7 +482,7 @@ class ASTVisitor:
             # t_name=f"event_{t_id}"
             template_select = get_template("SELECT") \
                 .set_value("PROJ", "*") \
-                .set_value("TABLE", bt(ori_event_name)) \
+                .set_value("TABLE", ori_event_name) \
                 .set_value("CONDITION", f"channel='{channel}'")
 
             # template_view=get_template("CREATE_VIEW")\
@@ -688,12 +688,13 @@ class ASTVisitor:
         if isinstance(lhs, tuple) and isinstance(rhs, tuple):
             key, id_op, join_key = self.__get_key_and_idop(lhs, rhs)
             if id_op != rhs:
-                lhs,rhs=rhs,lhs
+                raise Exception("id operator must be rhs")
             template=get_template("SELECT").set_value("PROJ",f"{id_op[0]}.{key} AS {key}, {id_op[0]}.rowtime AS rowtime ") \
                                 .set_value("TABLE",f"{lhs[0]}, {rhs[0]}") \
                                 .set_value("CONDITION",
                                            f"{lhs[0]}.{join_key}={rhs[0]}.{join_key} AND {rhs[0]}.rowtime "
-                                           f">= {lhs[0]}.rowtime")
+                                           f">= {lhs[0]}.rowtime AND "
+                                           f"{lhs[0]}.`{lhs[1]}` {comp} {rhs[0]}.`{rhs[1]}`")
                                            #f"BETWEEN {lhs[0]}.rowtime AND {lhs[0]}.rowtime + INTERVAL '1' DAY ")
             #template = get_template("JOIN_WHERE").set_value("PROJ", f"{id_op[0]}.{key} AS {key}") \
             #    .set_value("LEFT", lhs[0]).set_value("RIGHT", rhs[0]) \
@@ -915,14 +916,15 @@ class BuiltInFuncs:
     @classmethod
     def __totaldebit_stream(cls, params, visitor: ASTVisitor):
         channels=[params[0]['value']] if params[0]['type'] == "Channel" else params[0]['value']
-        table_name = '_'.join(channels) + "_transfer"
-        try:
-            visitor.symbol_table.resolve(table_name)
-        except KeyError:
-            condition_str = " OR ".join([f"channel='{c}'" for c in channels])
-            t = get_template("SELECT").set_value("PROJ", "*").set_value("TABLE", "transfer") \
-                .set_value("CONDITION", condition_str)
-            visitor.create_view(t, table_name, key='id')
+        #table_name = '_'.join(channels) + "_transfer"
+        #try:
+        #    visitor.symbol_table.resolve(table_name)
+        #except KeyError:
+        condition_str = " OR ".join([f"channel='{c}'" for c in channels])
+        t = get_template("SELECT").set_value("PROJ", "*").set_value("TABLE", "transfer") \
+            .set_value("CONDITION", condition_str)
+        table_name=visitor.get_new_name(COUNTER_TYPE.EVENT,"SELECT",*t.get_key_value())
+        visitor.create_view(t, table_name, key='id')
 
         if not params[1]['value'].is_integer():
             log_collect(f"TOTALDEBIT: {params[1]['value']} is truncated to {int(params[1]['value'])}",'warning')

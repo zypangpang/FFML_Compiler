@@ -21,6 +21,7 @@ def set_opt_vars(level):
     OPT_UDF = True if level >2 else False
     OPT_RETRACT = True if level >3 else False
 
+    #OPT_RETRACT=True
     #OPT_UNION_ALL=False
     #OPT_UDF=False
 
@@ -797,6 +798,9 @@ class BuiltInFuncs:
         'totaldebit': {
             "param_type": [('Channel', 'Digits', 'Int'), ('ChannelList', 'Digits', 'Int'), ],
         },
+        'transcount': {
+            "param_type": [('Channel', 'Digits', 'Int'), ('ChannelList', 'Digits', 'Int'), ],
+        },
         'badaccount': {
             "param_type": [('EventParam',)],
         },
@@ -835,6 +839,20 @@ class BuiltInFuncs:
         if len(params) == 2:
             params.append({'type': 'Int', 'value': daycount})
         if not cls.verify_params("totaldebit", params):
+            raise Exception("TOTALDEBIT requires 1 or 2 parameters: Channel|ChannelList, [interval]")
+        return params
+
+    @classmethod
+    def params_transcount(cls, params, visitor):
+        try:
+            daycount = visitor.symbol_table.resolve("hist_days").attr['value']
+        except KeyError:
+            daycount = 1
+        if len(params) == 1:
+            params.append({'type': 'Digits', 'value': 1})
+        if len(params) == 2:
+            params.append({'type': 'Int', 'value': daycount})
+        if not cls.verify_params("transcount", params):
             raise Exception("TOTALDEBIT requires 1 or 2 parameters: Channel|ChannelList, [interval]")
         return params
 
@@ -947,6 +965,74 @@ class BuiltInFuncs:
         t_name = visitor.get_new_name(COUNTER_TYPE.PROCEDURE, *template.get_key_value())
         visitor.create_view(template, t_name, key='accountnumber')
         return t_name, 'totaldebit'
+
+    @classmethod
+    def transcount(cls, params, visitor: ASTVisitor):
+        if OPT_UDF:
+            return cls.__transcount_udf(params, visitor)
+        else:
+            return cls.__transcount_stream(params, visitor)
+
+    @classmethod
+    def __transcount_udf(cls, params, visitor: ASTVisitor):
+        try:
+            cur_table = visitor.symbol_table.resolve("current_table").attr['value']
+        except KeyError:
+            raise Exception("Current table not defined")
+
+        if not params[1]['value'].is_integer():
+            log_collect(f"TRANSCOUNT: {params[1]['value']} is truncated to {int(params[1]['value'])}", 'warning')
+            # logging.warning(f"TOTALDEBIT: {params[1]['value']} is truncated to {int(params[1]['value'])}")
+
+        channels = [params[0]['value']] if params[0]['type'] == "Channel" else params[0]['value']
+        interval = int(params[1]['value'])
+        daycount = int(params[2]['value'])
+
+        template = get_template("PROJ").set_value("PROJ", "S.id,S.rowtime,T.v as transcount") \
+            .set_value("TABLE", f"{cur_table} as S, LATERAL TABLE(TRANSCOUNT(accountnumber,"
+                                f"'{','.join(channels)}',{interval},{daycount})) as T(v)")
+
+        # template = get_template("PROJ").set_value("PROJ", f"*,TOTALDEBIT(accountnumber,{'_'.join(channels)}, {interval}) AS totaldebit") \
+        #    .set_value("TABLE", cur_table)#.set_value("KEY", "accountnumber")
+        new_table = visitor.create_view(template,
+                                        visitor.get_new_name(COUNTER_TYPE.PROCEDURE, *template.get_key_value()),
+                                        key="id")
+        return new_table, "transcount"
+
+    @classmethod
+    def __transcount_stream(cls, params, visitor: ASTVisitor):
+        channels = [params[0]['value']] if params[0]['type'] == "Channel" else params[0]['value']
+        # table_name = '_'.join(channels) + "_transfer"
+        # try:
+        #    visitor.symbol_table.resolve(table_name)
+        # except KeyError:
+        condition_str = " OR ".join([f"channel='{c}'" for c in channels])
+        t = get_template("SELECT").set_value("PROJ", "*").set_value("TABLE", "transfer") \
+            .set_value("CONDITION", condition_str)
+        table_name = visitor.get_new_name(COUNTER_TYPE.EVENT, "SELECT", *t.get_key_value())
+        visitor.create_view(t, table_name, key='id')
+
+        if not params[1]['value'].is_integer():
+            log_collect(f"TRANSCOUNT: {params[1]['value']} is truncated to {int(params[1]['value'])}", 'warning')
+        interval = int(params[1]['value'])
+        daycount = int(params[2]['value'])
+        template = get_template("WINDOW_WITH_END").set_value("PROJ", "accountnumber, COUNT(*) AS transcount") \
+            .set_value("TABLE", table_name) \
+            .set_value("KEY", "accountnumber") \
+            .set_value("INTERVAL", f"'{interval}' DAY")
+        t_name = visitor.get_new_name(COUNTER_TYPE.PROCEDURE, "WINDOW_WITH_END", *template.get_key_value())
+        visitor.create_view(template, t_name, key='accountnumber')
+        # template=get_template("SELECT").set_value("PROJ", "accountnumber, totaldebit, rowtime")\
+        #                .set_value("TABLE",t_name)\
+        #                .set_value("CONDITION",f"rowtime >= CURRENT_TIMESTAMP - INTERVAL '{daycount}' DAY")
+        template = get_template("TOPN").set_value("PROJ", "accountnumber, transcount, rowtime") \
+            .set_value("KEY", "accountnumber") \
+            .set_value("ORDER", "rowtime") \
+            .set_value("TABLE", t_name) \
+            .set_value("CONDITION", f'<= {daycount}')
+        t_name = visitor.get_new_name(COUNTER_TYPE.PROCEDURE, *template.get_key_value())
+        visitor.create_view(template, t_name, key='accountnumber')
+        return t_name, 'transcount'
 
     @classmethod
     def badaccount(cls, params, visitor: ASTVisitor):

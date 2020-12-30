@@ -107,9 +107,11 @@ def set_config_value(key,val):
 LOG_FILE= './translator.log'
 
 PREDEFINED_EVENTS={
+    "withdrawal",
     "transfer",
     "password_change",
-    "login"
+    "login",
+    "failed_login",
 }
 
 # ********* Configurable **************

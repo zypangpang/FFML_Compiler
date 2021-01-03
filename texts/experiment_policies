@@ -1,7 +1,7 @@
 //POLICYID ['ATM01234']
-//ON ATM[withdrawal]
-//IF withdrawal.amount >= 500.00
-//THEN ALERT(withdrawal.transid, withdrawal.sortcode, withdrawal.accountnumber);
+//ON ATM[transfer]
+//IF transfer.amount >= 500.00
+//THEN ALERT(transfer.transid, transfer.sortcode, transfer.accountnumber);
 
 //Simple event with simple condition
 POLICYID ['Simple']
@@ -22,26 +22,26 @@ THEN ALERT(transfer.transid, transfer.sortcode,transfer.accountnumber);
 
 // Simple event with history condition
 POLICYID ['Complex1']
-ON ATM[withdrawal]
+ON ONL[transfer]
 IF
-   QUERY TOTALDEBIT(ATM, withdrawal.sortcode, withdrawal.accountnumber,1) + withdrawal.amount >= 250.00
+   QUERY TOTALDEBIT(ATM, transfer.sortcode, transfer.accountnumber,1) + transfer.amount >= 250.00
    AND
-   HISTORY(5) [QUERY TOTALDEBIT(ATM, withdrawal.sortcode, withdrawal.accountnumber,1) >= 250.00] >=3
+   HISTORY(5) [QUERY TOTALDEBIT(ATM, transfer.sortcode, transfer.accountnumber,1) >= 250.00] >=3
 THEN
-   BLOCK( withdrawal.sortcode,  withdrawal.accountnumber)
+   BLOCK( transfer.sortcode,  transfer.accountnumber)
    AND
-   ALERT(withdrawal.transid, withdrawal.sortcode, withdrawal.accountnumber);
+   ALERT(transfer.transid, transfer.sortcode, transfer.accountnumber);
 
 // Simple event with cross channel aggregate condition
 POLICYID ['Complex2']
-ON ATM [withdrawal]
+ON ONL[transfer]
 IF
-   withdrawal.amount >= 250.00
+   transfer.amount >= 250.00
    AND
-   QUERY TRANSCOUNT ((CP,CNP),withdrawal.sortcode,withdrawal.accountnumber,3) > 20
+   QUERY TRANSCOUNT ((CP,CNP),transfer.sortcode,transfer.accountnumber,3) > 20
    AND
-   QUERY TOTALDEBIT ((CP,CNP),withdrawal.sortcode,withdrawal.accountnumber,3) > 5000.00
+   QUERY TOTALDEBIT ((CP,CNP),transfer.sortcode,transfer.accountnumber,3) > 2000.00
 THEN
-   BLOCK (withdrawal.sortcode,withdrawal.accountnumber)
+   BLOCK (transfer.sortcode,transfer.accountnumber)
    AND
-   ALERT (withdrawal.transid,withdrawal.sortcode,withdrawal.accountnumber);
+   ALERT (transfer.transid,transfer.sortcode,transfer.accountnumber);

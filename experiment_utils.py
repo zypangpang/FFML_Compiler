@@ -1,4 +1,5 @@
 import random,functools
+from collections import defaultdict
 from datetime import datetime,timedelta
 
 class FileManager:
@@ -41,6 +42,30 @@ class EventWriter:
                    f"{event_dict['channel']},{event_dict['time']},{event_dict['eventtype']}\n")
 
 
+class TransferAggregator:
+    def __init__(self):
+        #self.cur_time_obj=None
+        self.transcount=defaultdict(lambda: defaultdict(int))
+        self.totaldebit=defaultdict(lambda: defaultdict(int))
+
+    def aggregate(self,cur_event):
+        date_str=str(datetime.strptime(cur_event['time'],TimeGenerator.TIME_FORMAT).date())
+        a_num=cur_event['a_num']
+        value=cur_event['value']
+        self.transcount[a_num][date_str]+=1
+        self.totaldebit[a_num][date_str]+=value
+
+    def output(self):
+        print("Transcount:")
+        for k,v in self.transcount.items():
+            print(f"{k}: {dict(v)}")
+        print("Totaldebit:")
+        for k,v in self.totaldebit.items():
+            print(f"{k}: {dict(v)}")
+
+
+
+
 class EventHook:
 
     @classmethod
@@ -48,8 +73,9 @@ class EventHook:
         EventWriter.write_transfer({**cur_event,'value':value})
 
 
-
 class TimeGenerator:
+    TIME_FORMAT ="%Y-%m-%dT%H:%M:%SZ"
+
     def __init__(self,Y=2020,m=1,d=1,H=0,M=0,S=0):
         self.dt=datetime(Y,m,d,H,M,S)
         self.delta=timedelta(seconds=1)
@@ -58,7 +84,7 @@ class TimeGenerator:
         self.delta=delta
 
     def get_next_time(self):
-        r_str= self.dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+        r_str= self.dt.strftime(self.TIME_FORMAT)
         self.dt=self.dt+self.delta
         return r_str
 
@@ -71,6 +97,7 @@ class TimeGenerator:
             self.dt=self.dt+timedelta(minutes=num)
 
 
+'''
 def simple_data_generate(num, file, channel, event, value):
     #with open(path,'w') as file:
         #head= "id, accountnumber, sortcode, value, channel, rowtime, eventtype"
@@ -86,6 +113,27 @@ def simple_data_generate(num, file, channel, event, value):
             hit^=1
             time_str=dt.get_next_time()
             file.write(f"{id},{account_number},{sortcode},{v},{channel},{time_str},{event}\n")
+'''
+
+def simple_data_generate(num,file,channel,event,event_hook=None):
+    range_end = num // 10
+    dt = TimeGenerator()
+    for id in range(num):
+        account_number = random.randint(0, range_end)
+        time_str = dt.get_next_time()
+        cur_event = {
+            'id': id,
+            'a_num': account_number,
+            'channel': channel,
+            'time': time_str,
+            'eventtype': event,
+            # 'next_time_obj': dt
+        }
+        file.write(f"{id},{account_number},{channel},{time_str},{event}\n")
+        if event_hook: event_hook(cur_event)
+        #dt.forward('h',random.randint(1,2))
+        dt.forward('h',1)
+
 
 def medium_data_generate(num,file,channel,events_list,duration,event_hook=None):
     #with open(path,'w') as file:
@@ -105,16 +153,27 @@ def medium_data_generate(num,file,channel,events_list,duration,event_hook=None):
                             'a_num':a_num,
                             'channel':channel,
                             'time':time_str,
-                            'eventtype':event
+                            'eventtype':event,
+                            #'next_time_obj': dt
                         }
                         file.write(f"{id},{a_num},{channel},{time_str},{event}\n")
                         if event_hook: event_hook(cur_event)
                         id += 1
             dt.forward('h')
 
-def simple_event_hook(cur_event):
-    if cur_event['eventtype']=='transfer':
-        EventHook.simple_transfer_hook(cur_event,500)
+class MediumEventHook:
+    def __init__(self,tmin=100,tmax=500):
+        #self.bit=True
+        self.transfer_value_min=tmin
+        self.transfer_value_max=tmax
+        self.aggregator=TransferAggregator()
+
+    def hook(self,cur_event):
+        if cur_event['eventtype']=='transfer':
+            cur_event['value']=random.randint(self.transfer_value_min,self.transfer_value_max)
+            EventWriter.write_transfer(cur_event)
+            #EventHook.simple_transfer_hook(cur_event,)
+            self.aggregator.aggregate(cur_event)
 
 
 
@@ -123,15 +182,21 @@ def test():
     print(dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
     d=timedelta(seconds=1)
     print(dt+d)
+    print(dt.date())
+    exit(0)
 
 if __name__ == '__main__':
+    #test()
 
     channel="ONL"
     events=['failed_login','failed_login',"login",'transfer']
     #simple_data_generate(10,"exp_test.txt","ONL","transfer",500)
     events_file=FileManager.get_file('events')
 
-    medium_data_generate(100,events_file,channel,[events,['login','password_change','transfer']],20,simple_event_hook)
+    m_hook=MediumEventHook()
+    #medium_data_generate(100,events_file,channel,[["transfer"]],300,m_hook.hook)
+    simple_data_generate(100,events_file,channel,"transfer",m_hook.hook)
+    m_hook.aggregator.output()
 
     FileManager.close_all()
 

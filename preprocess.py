@@ -3,9 +3,10 @@ import sys
 
 
 class Preprocessor:
-    def __init__(self, file_path=None):
+    def __init__(self, file_path:str=None):
         self.file_path = file_path
-        self.new_file_path = f".{self.file_path}.tmp"
+        name=file_path[file_path.rfind('/')+1:]
+        self.new_file_path = f".{name}.tmp"
 
     @staticmethod
     def remove_blank(line):

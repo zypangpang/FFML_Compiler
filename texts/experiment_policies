@@ -7,7 +7,7 @@
 POLICYID ['Simple']
 ON ONL[transfer]
 IF transfer.amount >= 500.00
-THEN ALERT(transfer.transid, transfer.sortcode, transfer.accountnumber);
+THEN ALERT(transfer.id, transfer.accountnumber);
 
 // Complex event with aggregate condition
 POLICYID ['Medium']
@@ -38,9 +38,9 @@ ON ONL[transfer]
 IF
    transfer.amount >= 250.00
    AND
-   QUERY TRANSCOUNT ((CP,CNP),transfer.sortcode,transfer.accountnumber,3) > 20
+   QUERY TRANSCOUNT ((ONL,CNP),transfer.sortcode,transfer.accountnumber,3) > 20
    AND
-   QUERY TOTALDEBIT ((CP,CNP),transfer.sortcode,transfer.accountnumber,3) > 2000.00
+   QUERY TOTALDEBIT ((ONL,CNP),transfer.sortcode,transfer.accountnumber,3) > 2000.00
 THEN
    BLOCK (transfer.sortcode,transfer.accountnumber)
    AND

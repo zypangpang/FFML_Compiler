@@ -882,14 +882,19 @@ class BuiltInFuncs:
             cond_tables = visitor.symbol_table.resolve("condition_table").attr['value']
         except KeyError:
             raise Exception("Condition table not defined")
-        proj = ','.join([bt(param['value'][1]) for param in params])
+        proj_list = [bt(param['value'][1]) for param in params]+['sourcetime','PROCTIME() AS resulttime']
+        proj=','.join(proj_list)
+
         for cond_table in cond_tables:
+            result_table_template = get_template("PROJ").set_value("PROJ", proj).set_value("TABLE", cond_table)
+            restable_name = visitor.get_new_name(COUNTER_TYPE.ACTION, "PROJ", *result_table_template.get_key_value())
+            visitor.create_view(result_table_template,restable_name,key='id')
             template = get_template("INSERT").set_value("TABLE", t_name) \
-                .set_value("CONTENT", get_template("PROJ")
-                           .set_value("PROJ", proj)
-                           .set_value("TABLE", cond_table).get_code())
-            if not visitor.action_check_repeat(t_name,proj,cond_table):
+                .set_value("CONTENT",get_template("PROJ").set_value("PROJ","*").set_value("TABLE",restable_name).get_code() )
+            if not visitor.action_check_repeat(t_name,restable_name):
                 visitor.add_policy_sql(template)
+
+    #    "INSERT INTO block SELECT id,accountnumber,sourcetime,CURRENT_TIMESTAMP AS resulttime FROM transfer");
 
     @classmethod
     def alert(cls, params, visitor):

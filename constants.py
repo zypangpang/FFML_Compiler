@@ -40,6 +40,7 @@ class COUNTER_TYPE(Enum):
     MATH=5
     COUNT=6
     CAST=7
+    ACTION=8
 
 class TIME_UNIT(Enum):
     SECOND=0

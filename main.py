@@ -120,15 +120,14 @@ class Main:
         '''
         try:
             root=self.__parse(in_file, ast=True,out_file=None,output=False)
+            visitor = ASTVisitor()
+            policies = visitor.visit(root)
+            policy_num = len(policies)
+            logging.info(f"Generated {policy_num} {'policies' if policy_num > 1 else 'policy'}.")
         except Exception as e:
-            log_collect(str(e), "error")
+            log_collect(str(e), "exception")
             print(e)
             return e
-
-        visitor = ASTVisitor()
-        policies = visitor.visit(root)
-        policy_num = len(policies)
-        logging.info(f"Generated {policy_num} {'policies' if policy_num > 1 else 'policy'}.")
 
         file=bool(out_file)
         out_file=open(out_file,'w') if out_file else sys.stdout

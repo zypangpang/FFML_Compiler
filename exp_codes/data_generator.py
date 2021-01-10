@@ -1,8 +1,9 @@
 import random,functools
 from collections import defaultdict
 from datetime import datetime,timedelta
-from kafka import KafkaProducer
-import json,abc,time
+import time
+from common import FileEventWriter, FileManager
+
 
 #class KafkaHelper():
 #    producer = KafkaProducer(bootstrap_servers="localhost:9092",value_serializer=lambda v: json.dumps(v).encode('utf-8'))
@@ -11,63 +12,6 @@ import json,abc,time
 #    def send_data(cls,topic,dict_value):
 #        cls.producer.send(topic,dict_value)
 
-
-class FileManager:
-    #events_path = "/home/zypang/IdeaProjects/blink-test/spend-report/data/event.csv"
-    events_path= "../data/exp_events.csv"
-    transfer_path = '../data/exp_transfer.csv'
-    #transfer_path="/home/zypang/IdeaProjects/blink-test/spend-report/data/transfer.csv"
-    events_file=None
-    transfer_file=None
-
-    @classmethod
-    def get_file(cls,name):
-        if name=='transfer':
-            if cls.transfer_file is None:
-                cls.transfer_file = open(cls.transfer_path, 'w')
-                head = "id, accountnumber, sortcode, value, channel, rowtime, eventtype"
-                cls.transfer_file.write(head+'\n')
-
-            return cls.transfer_file
-        if name=='events':
-            if cls.events_file is None:
-                cls.events_file = open(cls.events_path, 'w')
-                head = "id,accountnumber,channel,rowtime,eventtype"
-                cls.events_file.write(head+'\n')
-
-            return cls.events_file
-
-    @classmethod
-    def close_all(cls):
-        if cls.transfer_file:
-            cls.transfer_file.close()
-        if cls.events_file:
-            cls.events_file.close()
-
-class EventWriter(abc.ABC):
-    @abc.abstractmethod
-    def write_transfer(self,event_dict):
-        pass
-
-class FileEventWriter(EventWriter):
-    def write_transfer(self,event_dict):
-        file=FileManager.get_file('transfer')
-        sortcode=1
-        file.write(f"{event_dict['id']},{event_dict['accountnumber']},{sortcode},{event_dict['value']},"
-                   f"{event_dict['channel']},{event_dict['rowtime']},{event_dict['eventtype']}\n")
-    def write_event(self,event_dict):
-        file=FileManager.get_file('events')
-        file.write(f"{event_dict['id']},{event_dict['accountnumber']},{event_dict['channel']},{event_dict['rowtime']},{event_dict['eventtype']}\n")
-
-class KafkaEventWriter(EventWriter):
-    def __init__(self):
-        self.producer = KafkaProducer(bootstrap_servers="localhost:9092",value_serializer=lambda v: json.dumps(v).encode('utf-8'))
-
-    def write_transfer(self,event_dict):
-        self.producer.send("transfer",event_dict)
-
-    def write_event(self,event_dict):
-        self.producer.send("event",event_dict)
 
 class TransferAggregator:
     def __init__(self):
@@ -90,14 +34,26 @@ class TransferAggregator:
         for k,v in self.totaldebit.items():
             print(f"{k}: {dict(v)}")
 
+class TransferResultCollector:
 
+    def __init__(self,event_writer,aggregator,policy):
+        self.aggregator=aggregator
+        self.policy=policy
+        self.event_writer=event_writer
 
+    def collect_result(self,cur_event):
+        if self.policy=='Simple':
+            if cur_event['value']>=500:
+                self.event_writer.write_result_id(cur_event)
 
-class EventHook:
-
-    @classmethod
-    def simple_transfer_hook(cls,cur_event,value):
-        EventWriter.write_transfer({**cur_event,'value':value})
+        elif self.policy=='Medium':
+            pass
+        elif self.policy=='Complex1':
+            pass
+        elif self.policy=='Complex2':
+            pass
+        else:
+            raise Exception("Unknown policy")
 
 
 class TimeGenerator:
@@ -142,8 +98,12 @@ def simple_data_generate(num, file, channel, event, value):
             file.write(f"{id},{account_number},{sortcode},{v},{channel},{time_str},{event}\n")
 '''
 
-def simple_data_generate(event_writer,num,sleep_sec, channel,event,event_hook=None,):
-    def generate():
+def continuous_data_generate(event_writer,num,sleep_sec, channel,event,event_hook=None,):
+    range_end = num // 10
+    dt = TimeGenerator()
+    id=0
+    while True:
+        time.sleep(sleep_sec)
         account_number = random.randint(0, range_end)
         time_str = dt.get_next_time()
         cur_event = {
@@ -159,21 +119,30 @@ def simple_data_generate(event_writer,num,sleep_sec, channel,event,event_hook=No
         if event_hook: event_hook(cur_event)
         # dt.forward('h',random.randint(1,2))
         # dt.forward('h',1)
+        id+=1
 
+def simple_data_generate(event_writer,num, channel,event,event_hook=None,):
     range_end = num // 10
     dt = TimeGenerator()
-    if sleep_sec==-1:
-        for id in range(num):
-            generate()
-    else:
-        id=0
-        while True:
-            time.sleep(sleep_sec)
-            generate()
-            id+=1
+    for id in range(num):
+        account_number = random.randint(0, range_end)
+        time_str = dt.get_next_time()
+        cur_event = {
+            'id': id,
+            'accountnumber': account_number,
+            'channel': channel,
+            'rowtime': time_str,
+            'eventtype': event,
+            # 'next_time_obj': dt
+        }
+        event_writer.write_event(cur_event)
+        if event_hook: event_hook(cur_event)
+        # dt.forward('h',random.randint(1,2))
+        # dt.forward('h',1)
 
 
-def medium_data_generate(event_writer,num,file,channel,events_list,duration,event_hook=None):
+
+def medium_data_generate(event_writer,num,channel,events_list,duration,event_hook=None):
     #with open(path,'w') as file:
         #head="id,accountnumber,channel,rowtime,eventtype"
         #file.write(head+'\n')
@@ -222,9 +191,9 @@ class MediumEventHook:
 def simple_generate():
     channel="ONL"
     #events_file=FileManager.get_file("events")
-    event_writer=KafkaEventWriter()
+    event_writer=FileEventWriter()
     m_hook=MediumEventHook(event_writer,tmin=400,tmax=700)
-    simple_data_generate(event_writer,1000,0.001,channel,"transfer",m_hook.hook)
+    simple_data_generate(event_writer,1000,channel,"transfer",m_hook.hook)
 
 
 def medium_generate():
@@ -233,11 +202,10 @@ def medium_generate():
     #simple_data_generate(10,"exp_test.txt","ONL","transfer",500)
     events_file=FileManager.get_file('events')
 
-    event_writer=KafkaEventWriter()
+    event_writer=FileEventWriter()
     aggregator=TransferAggregator()
     m_hook=MediumEventHook(event_writer=event_writer,aggregator=aggregator)
-    #medium_data_generate(100,events_file,channel,[["transfer"]],300,m_hook.hook)
-    simple_data_generate(event_writer, 1000, 0.1, channel,"transfer",m_hook.hook)
+    medium_data_generate(event_writer,100,channel,[events],300,m_hook.hook)
     m_hook.aggregator.output()
 
 
@@ -252,8 +220,6 @@ def test():
 
 
 if __name__ == '__main__':
-    test()
-    exit(0)
     try:
         simple_generate()
     except Exception as e:

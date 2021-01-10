@@ -12,7 +12,7 @@ class FileManager:
     }
     heads={
         "events":"id,accountnumber,channel,rowtime,eventtype",
-        "transfer":"id, accountnumber, sortcode, value, channel, rowtime, eventtype",
+        "transfer":"id,accountnumber,sortcode,value,channel,rowtime,eventtype",
         "result":"id",
     }
     file_objs={}
@@ -64,11 +64,11 @@ class FileEventWriter(EventWriter):
 
     def write_result_id(self,event_dict):
         file=FileManager.get_file('result')
-        file.write(str(event_dict['id']))
+        file.write(f"{event_dict['id']}\n")
 
 class KafkaEventWriter(EventWriter):
     def __init__(self):
-        self.producer = KafkaProducer(bootstrap_servers="localhost:9092",value_serializer=lambda v: json.dumps(v).encode('utf-8'))
+        self.producer = KafkaProducer(bootstrap_servers="10.0.0.13:9092",value_serializer=lambda v: json.dumps(v).encode('utf-8'))
 
     def write_transfer(self,event_dict):
         self.producer.send("transfer",event_dict)

@@ -19,10 +19,15 @@ class DataSender:
                 time.sleep(sleep_sec)
                 cur_event=event_reader.__next__()
                 print(cur_event)
+                #cur_event['id']=int(cur_event['id'])
+                #cur_event['accountnumber']=int(cur_event['accountnumberid'])
                 self.event_writer.write_event(cur_event)
                 if cur_event['eventtype']=='transfer':
                     transfer_event=transfer_reader.__next__()
                     print(transfer_event)
+                    #transfer_event['id']=int(transfer_event['id'])
+                    #transfer_event['accountnumber']=int(transfer_event['accountnumber'])
+                    #transfer_event['value']=float(transfer_event['value'])
                     self.event_writer.write_transfer(transfer_event)
         except Exception as e:
             print(e)

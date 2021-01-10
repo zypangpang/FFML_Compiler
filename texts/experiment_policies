@@ -15,7 +15,7 @@ ON
    ONL SEQ(300)[failed_login, failed_login, login, transfer]
    OR
    ONL SEQ(300)[login, password_change, transfer]
-IF QUERY TOTALDEBIT(CNP,transfer.sortcode,transfer.accountnumber,1)>=500.00
+IF QUERY TOTALDEBIT(ONL,transfer.sortcode,transfer.accountnumber,1)>=500.00
    AND
    transfer.amount >= 1500.00
 THEN ALERT(transfer.transid, transfer.sortcode,transfer.accountnumber);
@@ -24,9 +24,9 @@ THEN ALERT(transfer.transid, transfer.sortcode,transfer.accountnumber);
 POLICYID ['Complex1']
 ON ONL[transfer]
 IF
-   QUERY TOTALDEBIT(ATM, transfer.sortcode, transfer.accountnumber,1) + transfer.amount >= 250.00
+   QUERY TOTALDEBIT(ONL, transfer.sortcode, transfer.accountnumber,1) + transfer.amount >= 250.00
    AND
-   HISTORY(5) [QUERY TOTALDEBIT(ATM, transfer.sortcode, transfer.accountnumber,1) >= 250.00] >=3
+   HISTORY(5) [QUERY TOTALDEBIT(ONL, transfer.sortcode, transfer.accountnumber,1) >= 250.00] >=3
 THEN
    BLOCK( transfer.sortcode,  transfer.accountnumber)
    AND

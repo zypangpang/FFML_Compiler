@@ -5,15 +5,25 @@ from datetime import datetime,timedelta
 from influxdb import InfluxDBClient
 
 TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
-consumer = KafkaConsumer('alert',
+
+BOOTSTRAP_SERVERS = ['10.0.0.13:9092'],
+TOPIC="alert"
+MEASUREMENT="ffml.latency"
+WRITE_INFLUXDB=True
+
+
+consumer = KafkaConsumer(TOPIC,
                          #auto_offset_reset='earliest',
                          enable_auto_commit=False,
                              group_id='test-group',
-                             bootstrap_servers=['10.0.0.13:9092'],
+                             bootstrap_servers=BOOTSTRAP_SERVERS,
                              value_deserializer=lambda m: json.loads(m.decode('utf-8')))
 
-client = InfluxDBClient(host="10.0.0.11", port=8086, database='mydb')
+if WRITE_INFLUXDB:
+    client = InfluxDBClient(host="10.0.0.11", port=8086, database='mydb')
+
 records_sum=0
+#total_latency=0
 
 def consume_msg():
     latencies=[]
@@ -35,7 +45,8 @@ def consume_msg():
                 ml=mean(latencies)
                 print(ml)
                 latencies=[]
-                write_influxdb(ml)
+                if WRITE_INFLUXDB:
+                    write_influxdb(MEASUREMENT,ml)
 
 
     # consume earliest available messages, don't commit offsets
@@ -44,13 +55,11 @@ def consume_msg():
     # StopIteration if no message after 1sec
     #KafkaConsumer(consumer_timeout_ms=1000)
 
-
-
-def write_influxdb(value):
+def write_influxdb(measurement,value):
     dt=datetime.utcnow()
     json_body = [
         {
-            "measurement": "ffml.latency",
+            "measurement": measurement,
             "tags": {
                 "host": "server01",
                 "region": "us-west"
@@ -61,7 +70,7 @@ def write_influxdb(value):
             }
         }
     ]
-    client.write_points(json_body)
+    client.write_points(json_body,retention_policy='one_day')
 
 send_token=False
 timer_alive=True
@@ -89,5 +98,6 @@ def main_thread():
 if __name__ == '__main__':
     #dt=datetime.utcnow()
     #print(dt.strftime(TIME_FORMAT))
+
     timer_thread(10)
     main_thread()

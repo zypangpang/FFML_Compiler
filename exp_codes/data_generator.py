@@ -1,7 +1,7 @@
 import random,functools
 from collections import defaultdict
 from datetime import datetime,timedelta,date
-import time
+import time,sys
 from common import FileEventWriter, FileManager
 
 
@@ -46,7 +46,7 @@ class TransferAggregator:
             "ATM":defaultdict(list),
             "CNP":defaultdict(list),
         }
-        self.cur_date=date(1989,1,1)
+        self.cur_date=date(1990,1,1)
 
     def hook(self,cur_event):
         if cur_event['eventtype'] == 'transfer':
@@ -57,25 +57,35 @@ class TransferAggregator:
         value=cur_event['value']
         channel=cur_event['channel']
         row_date=datetime.strptime(cur_event['rowtime'],TimeGenerator.TIME_FORMAT).date()
-        if row_date<self.cur_date:
-            self.cur_date=row_date
-            self.transcount[channel][a_num].append([str(row_date),0])
-            self.totaldebit[channel][a_num].append([str(row_date),0])
-        elif row_date> self.cur_date:
-            print("Error: late event")
-            return
 
         if not self.transcount[channel][a_num]:
             self.transcount[channel][a_num].append([str(row_date), 0])
             self.totaldebit[channel][a_num].append([str(row_date), 0])
+
+        cur_date=date(*[int(x) for x in self.transcount[channel][a_num][-1][0].split('-')])
+
+        if cur_date<row_date:
+            #self.cur_date=row_date
+            self.transcount[channel][a_num].append([str(row_date),0])
+            self.totaldebit[channel][a_num].append([str(row_date),0])
+        elif cur_date>row_date:
+            print(row_date)
+            print(self.cur_date)
+            print("Error: late event")
+            return
+
         self.transcount[channel][a_num][-1][1]+=1
         self.totaldebit[channel][a_num][-1][1]+=value
 
     def get_latest_totaldebit(self,channel,accountnumber,num):
-        return self.totaldebit[channel][accountnumber][-num:][1]
+        if not self.totaldebit[channel][accountnumber]:
+            return [0]
+        return [x[1] for x in self.totaldebit[channel][accountnumber][-num:]]
 
     def get_latest_transcount(self,channel,accountnumber,num):
-        return self.transcount[channel][accountnumber][-num:][1]
+        if not self.transcount[channel][accountnumber]:
+            return [0]
+        return [x[1] for x in self.transcount[channel][accountnumber][-num:]]
 
 
     def output(self):
@@ -135,16 +145,19 @@ class TransferResultCollector:
 class TimeGenerator:
     TIME_FORMAT ="%Y-%m-%dT%H:%M:%SZ"
 
-    def __init__(self,Y=1900,m=1,d=1,H=0,M=0,S=0):
+    def __init__(self,Y=2000,m=1,d=1,H=0,M=0,S=0):
         self.dt=datetime(Y,m,d,H,M,S)
         self.delta=timedelta(seconds=1)
 
     def set_delta(self,delta):
         self.delta=delta
 
-    def get_next_time(self):
+    def get_next_time(self,delta=None):
         r_str= self.dt.strftime(self.TIME_FORMAT)
-        self.dt=self.dt+self.delta
+        if delta:
+            self.dt=self.dt+delta
+        else:
+            self.dt=self.dt+self.delta
         return r_str
 
     def forward(self,time_unit,num=1):
@@ -221,6 +234,33 @@ def simple_data_generate(event_writer,num, channels,event,event_hook=[],):
         # dt.forward('h',random.randint(1,2))
         # dt.forward('h',1)
 
+def distinct_data_generate(event_writer,num,channels,event,event_hook=[],):
+    #range_end = num // 10
+    dt = TimeGenerator()
+    id=0
+    while id < num:
+        channel=channels[0]
+        if len(channels)>1 and id % 10 ==0:
+           channel=channels[1]
+        #account_number = random.randint(0, range_end)
+        account_number=id
+        time_str = dt.get_next_time()
+        cur_event = {
+            'id': id,
+            'accountnumber': account_number,
+            'channel': channel,
+            'rowtime': time_str,
+            'eventtype': event,
+            # 'next_time_obj': dt
+        }
+        id+=1
+        event_writer.write_event(cur_event)
+        if event_hook:
+            for hook in event_hook:
+                hook(cur_event)
+        # dt.forward('h',random.randint(1,2))
+        # dt.forward('h',1)
+
 
 
 def medium_data_generate(event_writer,num,channel,events_list,duration,event_hook=[]):
@@ -235,7 +275,7 @@ def medium_data_generate(event_writer,num,channel,events_list,duration,event_hoo
             for events in events_list:
                 for event in events:
                     for a_num in range(row_per_event):
-                        time_str=dt.get_next_time()
+                        time_str=dt.get_next_time(timedelta(minutes=1))
                         cur_event={
                             'id':id,
                             'accountnumber':a_num,
@@ -250,10 +290,16 @@ def medium_data_generate(event_writer,num,channel,events_list,duration,event_hoo
                             for hook in event_hook:
                                 hook(cur_event)
                         id += 1
-            dt.forward('h')
+            dt.forward('h',2)
 
 
 
+
+def distinct_generate(num):
+    channels = ["ONL"]
+    event_writer = FileEventWriter()
+    #m_hook = TransferValueAssigner(event_writer, tmin=400, tmax=800)
+    distinct_data_generate(event_writer, num, channels, "login")
 
 
 def simple_generate():
@@ -270,10 +316,10 @@ def medium_generate():
     #simple_data_generate(10,"exp_test.txt","ONL","transfer",500)
 
     event_writer=FileEventWriter()
-    assigner=TransferValueAssigner(event_writer=event_writer)
+    assigner=TransferValueAssigner(event_writer=event_writer,tmin=1500,tmax=2000)
     aggregator=TransferAggregator()
-    result_collector=TransferResultCollector(event_writer,aggregator,'Simple')
-    medium_data_generate(event_writer,100,channel,[events],300,[assigner.hook,aggregator.hook,result_collector.hook])
+    result_collector=TransferResultCollector(event_writer,aggregator,'Medium')
+    medium_data_generate(event_writer,1000,channel,[events],10,[assigner.hook,result_collector.hook,aggregator.hook])
     aggregator.output()
 
 
@@ -288,8 +334,9 @@ def test():
 
 
 if __name__ == '__main__':
+    num=int(sys.argv[1])
     try:
-        medium_generate()
+        distinct_generate(num)
     except Exception as e:
         print(e)
         raise e

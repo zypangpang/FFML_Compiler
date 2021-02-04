@@ -258,6 +258,8 @@ class ASTVisitor:
     def __opt_merge_table_get_new_name(self,type,*args):
         feature_str=self.__assemble_feature_str(*args)
         try:
+            t=self.table_kv[feature_str]
+            log_collect(f"merge table {t}")
             return self.table_kv[feature_str]
         except KeyError:
             name=self.__get_new_name(type)

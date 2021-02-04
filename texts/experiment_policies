@@ -12,7 +12,7 @@ THEN ALERT(transfer.id, transfer.accountnumber);
 // Complex event with aggregate condition
 POLICYID ['Medium']
 ON
-   ONL SEQ(300)[failed_login, failed_login, login, transfer]
+   ONL SEQ(300)[ failed_login, login, transfer]
    OR
    ONL SEQ(300)[login, password_change, transfer]
 IF QUERY TOTALDEBIT(ONL,transfer.sortcode,transfer.accountnumber,1)>=500.00

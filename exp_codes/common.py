@@ -67,8 +67,10 @@ class FileEventWriter(EventWriter):
         file.write(f"{event_dict['id']}\n")
 
 class KafkaEventWriter(EventWriter):
+    KAFKA_HOST='localhost'
+    #KAFKA_HOST='10.0.0.13'
     def __init__(self):
-        self.producer = KafkaProducer(bootstrap_servers="10.0.0.13:9092",value_serializer=lambda v: json.dumps(v).encode('utf-8'))
+        self.producer = KafkaProducer(bootstrap_servers=self.KAFKA_HOST+":9092",value_serializer=lambda v: json.dumps(v).encode('utf-8'))
 
     def write_transfer(self,event_dict):
         self.producer.send("transfer",event_dict)

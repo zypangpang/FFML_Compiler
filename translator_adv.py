@@ -855,14 +855,14 @@ class BuiltInFuncs:
         if len(params) == 2:
             params.append({'type': 'Int', 'value': daycount})
         if not cls.verify_params("transcount", params):
-            raise Exception("TOTALDEBIT requires 1 or 2 parameters: Channel|ChannelList, [interval]")
+            raise Exception("TRANSCOUNT requires 1 or 2 parameters: Channel|ChannelList, [interval]")
         return params
 
     @classmethod
     def params_badaccount(cls, params, visitor):
         print(params)
         if not cls.verify_params("badaccount", params):
-            raise Exception("BADACCOUNT requires 1 parameter: Event.accountnumber")
+            raise Exception("BADACCOUNT requires 1 parameter: EventParam")
         return params
 
     @classmethod
@@ -1047,11 +1047,17 @@ class BuiltInFuncs:
             cur_table = visitor.symbol_table.resolve("current_table").attr['value']
         except KeyError:
             raise Exception("Current table not defined")
-        template = get_template("GROUPBY").set_value("PROJ", "accountnumber,BADACCOUNT(accountnumber) AS isbad") \
-            .set_value("TABLE", cur_table).set_value("KEY", "accountnumber")
-        new_table = visitor.create_view(template, visitor.get_new_name(COUNTER_TYPE.PROCEDURE, *template.get_key_value()),
-                                        key="accountnumber")
+        field=params[0]['value'][1]
+        template = get_template("PROJ").set_value("PROJ", "id,rowtime, BADACCOUNT({field}) as isbad") \
+            .set_value("TABLE", f"{cur_table}")
+
+        # template = get_template("PROJ").set_value("PROJ", f"*,TOTALDEBIT(accountnumber,{'_'.join(channels)}, {interval}) AS totaldebit") \
+        #    .set_value("TABLE", cur_table)#.set_value("KEY", "accountnumber")
+        new_table = visitor.create_view(template,
+                                        visitor.get_new_name(COUNTER_TYPE.PROCEDURE, *template.get_key_value()),
+                                        key="id")
         return new_table, "isbad"
+
 
     # Main call entry
     @classmethod

@@ -6,7 +6,7 @@ from influxdb import InfluxDBClient
 
 TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
-BOOTSTRAP_SERVERS = ['10.0.0.13:9092'],
+BOOTSTRAP_SERVERS = ['10.0.0.13:9092']
 TOPIC="alert"
 MEASUREMENT="ffml.latency"
 WRITE_INFLUXDB=True
@@ -31,9 +31,9 @@ def consume_msg():
     for message in consumer:
         # message value and key are raw bytes -- decode if necessary!
         # e.g., for unicode: `message.value.decode('utf-8')`
-        print ("%s:%d:%d: key=%s value=%s" % (message.topic, message.partition,
-                                              message.offset, message.key,
-                                              message.value))
+        #print ("%s:%d:%d: key=%s value=%s" % (message.topic, message.partition,
+        #                                      message.offset, message.key,
+        #                                      message.value))
         if message.value['state']:
             records_sum+=1
             source_dt=datetime.strptime(message.value['sourcetime'],TIME_FORMAT)
@@ -42,7 +42,7 @@ def consume_msg():
             latencies.append(latency/timedelta(milliseconds=1))
             if send_token:
                 send_token=False
-                ml=mean(latencies)
+                ml=max(latencies)
                 print(ml)
                 latencies=[]
                 if WRITE_INFLUXDB:

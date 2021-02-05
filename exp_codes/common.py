@@ -12,7 +12,7 @@ class FileManager:
     }
     heads={
         "events":"id,accountnumber,channel,rowtime,eventtype",
-        "transfer":"id,accountnumber,sortcode,value,channel,rowtime,eventtype",
+        "transfer":"id,accountnumber,dest_accountnumber,sortcode,value,channel,rowtime,eventtype",
         "result":"id",
     }
     file_objs={}
@@ -56,7 +56,7 @@ class FileEventWriter(EventWriter):
     def write_transfer(self,event_dict):
         file=FileManager.get_file('transfer')
         sortcode=1
-        file.write(f"{event_dict['id']},{event_dict['accountnumber']},{sortcode},{event_dict['value']},"
+        file.write(f"{event_dict['id']},{event_dict['accountnumber']},{event_dict['dest_accountnumber']},{sortcode},{event_dict['value']},"
                    f"{event_dict['channel']},{event_dict['rowtime']},{event_dict['eventtype']}\n")
     def write_event(self,event_dict):
         file=FileManager.get_file('events')
@@ -80,3 +80,4 @@ class KafkaEventWriter(EventWriter):
 
     def write_result_id(self,event_dict):
         self.producer.send("correct_result",event_dict)
+

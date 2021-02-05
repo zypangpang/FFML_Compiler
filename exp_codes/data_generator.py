@@ -31,6 +31,7 @@ class TransferValueAssigner:
 
     def assign_value(self,cur_event):
         cur_event['value'] = random.randint(self.transfer_value_min, self.transfer_value_max)
+        cur_event['dest_accountnumber'] = cur_event['accountnumber']
         self.event_writer.write_transfer(cur_event)
 
 class TransferAggregator:
@@ -216,7 +217,7 @@ def simple_data_generate(event_writer,num, channels,event,event_hook=[],):
     id=0
     while id < num:
         for channel in channels:
-            account_number = random.randint(0, range_end)
+            account_number = random.randrange(0, range_end)
             time_str = dt.get_next_time()
             cur_event = {
                 'id': id,
@@ -302,12 +303,12 @@ def distinct_generate(num):
     distinct_data_generate(event_writer, num, channels, "login")
 
 
-def simple_generate():
+def simple_generate(num):
     channel="ONL"
     #events_file=FileManager.get_file("events")
     event_writer=FileEventWriter()
     m_hook=TransferValueAssigner(event_writer, tmin=400, tmax=800)
-    simple_data_generate(event_writer,1000,channel,"transfer",[m_hook.hook])
+    simple_data_generate(event_writer,num,[channel],"transfer",[m_hook.hook])
 
 
 def medium_generate():
@@ -336,8 +337,8 @@ def test():
 if __name__ == '__main__':
     num=int(sys.argv[1])
     try:
-        distinct_generate(num)
+        #distinct_generate(num)
+        simple_generate(num)
     except Exception as e:
         print(e)
-        raise e
     FileManager.close_all()

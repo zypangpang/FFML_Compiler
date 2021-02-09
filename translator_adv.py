@@ -525,17 +525,26 @@ class ASTVisitor:
 
 
             #bt_event_seq = bt(event_seq)
+            event_map={}
+            event_tuple=[]
+            for e in event_seq:
+                if e in event_map:
+                    event_map[e]+=1
+                else:
+                    event_map[e]=1
+                event_tuple.append((e,event_map[e]))
+
             match_template = get_template("MATCH") \
                 .set_value("PROJ", "*") \
                 .set_value("TABLE", t_name) \
                 .set_value("PARTITION", "accountnumber") \
                 .set_value("ORDER", "rowtime") \
                 .set_value("MEASURES", f"{event_seq[-1]}.id as id,{event_seq[-1]}.rowtime AS rowtime") \
-                .set_value("PATTERN", " ".join(event_seq)) \
+                .set_value("PATTERN", " ".join([f"{e}{i}" for e,i in event_tuple])) \
                 .set_value("TIME_VAL", str(seq_time)) \
                 .set_value("TIME_UNIT", SEQ_UNIT.name) \
-                .set_value("DEFINE", ','.join([f"{item} AS eventtype='{item}'"
-                                               for item in event_seq]))
+                .set_value("DEFINE", ','.join([f"{e}{i} AS eventtype='{e}'"
+                                               for e,i in event_tuple]))
             t_name = self.get_new_name(COUNTER_TYPE.EVENT,"MATCH",*match_template.get_key_value())
             self.create_view(match_template, t_name, key='id')
 
@@ -680,7 +689,7 @@ class ASTVisitor:
         right_key = self.symbol_table.resolve(rhs[0]).attr['key']
 
         key = 'id' if left_key == 'id' or right_key == 'id' else 'accountnumber'
-        id_op = lhs if left_key == 'id' else rhs  # the operand with the 'key'
+        id_op = rhs if right_key == key else lhs  # the operand with the 'key'
 
         join_key = 'accountnumber'
         if left_key == 'id' and right_key == 'id':
@@ -690,13 +699,18 @@ class ASTVisitor:
     def __cal_comp(self, lhs, comp, rhs):
         if isinstance(lhs, tuple) and isinstance(rhs, tuple):
             key, id_op, join_key = self.__get_key_and_idop(lhs, rhs)
+            print("**********************")
+            print(key,id_op,join_key)
+            print("**********************")
             if id_op != rhs:
                 raise Exception("id operator must be rhs")
+            if comp == '!=':
+                comp = '<>'
             template=get_template("SELECT").set_value("PROJ",f"{id_op[0]}.{key} AS {key}, {id_op[0]}.rowtime AS rowtime ") \
                                 .set_value("TABLE",f"{lhs[0]}, {rhs[0]}") \
                                 .set_value("CONDITION",
-                                           f"{lhs[0]}.{join_key}={rhs[0]}.{join_key} AND {rhs[0]}.rowtime "
-                                           f">= {lhs[0]}.rowtime AND "
+                                           f"{lhs[0]}.{join_key}={rhs[0]}.{join_key} AND " # {rhs[0]}.rowtime "
+                                           #f">= {lhs[0]}.rowtime AND "
                                            f"{lhs[0]}.`{lhs[1]}` {comp} {rhs[0]}.`{rhs[1]}`")
                                            #f"BETWEEN {lhs[0]}.rowtime AND {lhs[0]}.rowtime + INTERVAL '1' DAY ")
             #template = get_template("JOIN_WHERE").set_value("PROJ", f"{id_op[0]}.{key} AS {key}") \
@@ -806,6 +820,12 @@ class BuiltInFuncs:
         'badaccount': {
             "param_type": [('EventParam',)],
         },
+        'usualip': {
+            "param_type": [('EventParam',)],
+        },
+        'usualdeviceid': {
+            "param_type": [('EventParam',)],
+        },
         'alert': {
             "param_type": [('EventParam', 'EventParam')],
         },
@@ -860,9 +880,22 @@ class BuiltInFuncs:
 
     @classmethod
     def params_badaccount(cls, params, visitor):
-        print(params)
         if not cls.verify_params("badaccount", params):
             raise Exception("BADACCOUNT requires 1 parameter: EventParam")
+        return params
+
+    @classmethod
+    def params_usualip(cls, params, visitor):
+        print(params)
+        if not cls.verify_params("usualip", params):
+            raise Exception("USUSALIP requires 1 parameter: EventParam")
+        return params
+
+    @classmethod
+    def params_usualdeviceid(cls, params, visitor):
+        print(params)
+        if not cls.verify_params("usualdeviceid", params):
+            raise Exception("USUALDEVICEID requires 1 parameter: EventParam")
         return params
 
     @classmethod
@@ -883,7 +916,8 @@ class BuiltInFuncs:
         try:
             cond_tables = visitor.symbol_table.resolve("condition_table").attr['value']
         except KeyError:
-            raise Exception("Condition table not defined")
+            cond_tables = visitor.symbol_table.resolve("event_table").attr['value']
+            log_collect("No condition table. Use event table.")
         proj_list = [bt(param['value'][1]) for param in params]+['sourcetime','PROCTIME() AS resulttime']
         proj=','.join(proj_list)
 
@@ -1043,12 +1077,17 @@ class BuiltInFuncs:
 
     @classmethod
     def badaccount(cls, params, visitor: ASTVisitor):
+        field = params[0]['value'][1]
+        return cls.__scalar_function("USUALIP", "usualip", [field], visitor)
+
+    @classmethod
+    def __scalar_function(cls,func_name,return_name, fields,visitor):
         try:
             cur_table = visitor.symbol_table.resolve("current_table").attr['value']
         except KeyError:
             raise Exception("Current table not defined")
-        field=params[0]['value'][1]
-        template = get_template("PROJ").set_value("PROJ", "id,rowtime, BADACCOUNT({field}) as isbad") \
+        #field = params[0]['value'][1]
+        template = get_template("PROJ").set_value("PROJ", f"id,rowtime, {func_name}({','.join(fields)}) as {return_name}") \
             .set_value("TABLE", f"{cur_table}")
 
         # template = get_template("PROJ").set_value("PROJ", f"*,TOTALDEBIT(accountnumber,{'_'.join(channels)}, {interval}) AS totaldebit") \
@@ -1056,8 +1095,18 @@ class BuiltInFuncs:
         new_table = visitor.create_view(template,
                                         visitor.get_new_name(COUNTER_TYPE.PROCEDURE, *template.get_key_value()),
                                         key="id")
-        return new_table, "isbad"
+        return new_table, return_name
 
+
+    @classmethod
+    def usualip(cls, params, visitor: ASTVisitor):
+        field = params[0]['value'][1]
+        return cls.__scalar_function("USUALIP","usualip",[field],visitor)
+
+    @classmethod
+    def usualdeviceid(cls, params, visitor: ASTVisitor):
+        field = params[0]['value'][1]
+        return cls.__scalar_function("USUALDEVICEID", "usualdid", [field], visitor)
 
     # Main call entry
     @classmethod

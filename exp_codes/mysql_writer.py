@@ -22,17 +22,45 @@ class MySQLDataWriter:
         self.cursor.close()
         self.db_connection.close()
 
-if __name__ == '__main__':
-    db=MySQLDataWriter()
+def insert_badaccount(db):
     query = "INSERT INTO badaccount(accountnumber) VALUES (%s);"
-    data=[]
+    data = []
     for id in range(100000):
         data.append(tuple([id]))
 
-    begin=time.time()
-    db.cursor.executemany(query,data)
+    begin = time.time()
+    db.cursor.executemany(query, data)
     db.commit()
-    print(f"Running time: {time.time()-begin}")
+    print(f"Running time: {time.time() - begin}")
+
+def insert_usualip(db):
+    query = "INSERT INTO usualip(accountnumber,ip) VALUES (%s,%s);"
+    data = []
+    ip="188.188.188.188"
+    for id in range(100000):
+        data.append((id,ip))
+
+    begin = time.time()
+    db.cursor.executemany(query, data)
+    db.commit()
+    print(f"Running time: {time.time() - begin}")
+
+def insert_usualdid(db):
+    query = "INSERT INTO usualdeviceid(accountnumber,did) VALUES (%s,%s);"
+    data = []
+    did=2021
+    for id in range(100000):
+        data.append((id,did))
+
+    begin = time.time()
+    db.cursor.executemany(query, data)
+    db.commit()
+    print(f"Running time: {time.time() - begin}")
 
 
+if __name__ == '__main__':
+    db = MySQLDataWriter()
+    insert_badaccount(db)
+    #insert_usualip(db)
+    #insert_usualdid(db)
     db.close()

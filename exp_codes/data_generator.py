@@ -25,6 +25,11 @@ class TransferValueAssigner:
     def hook(self,cur_event):
         if cur_event['eventtype']=='transfer':
             self.assign_value(cur_event)
+            self.assign_dest_accountnumber(cur_event)
+            self.assign_ip(cur_event)
+            self.assign_did(cur_event)
+
+            self.event_writer.write_transfer(cur_event)
             #EventHook.simple_transfer_hook(cur_event,)
             #if self.aggregator:
             #    self.aggregator.aggregate(cur_event)
@@ -32,7 +37,19 @@ class TransferValueAssigner:
     def assign_value(self,cur_event):
         cur_event['value'] = random.randint(self.transfer_value_min, self.transfer_value_max)
         cur_event['dest_accountnumber'] = cur_event['accountnumber']
-        self.event_writer.write_transfer(cur_event)
+
+    def assign_dest_accountnumber(self,cur_event):
+        cur_event['dest_accountnumber'] = cur_event['accountnumber']
+
+    def assign_did(self,cur_event):
+        cur_event['did'] = 2020
+
+    def assign_ip(self,cur_event):
+        if cur_event['id'] % 10 == 0:
+            cur_event['ip'] = '188.188.188.188'
+        else:
+            cur_event['ip'] = '158.158.158.158'
+
 
 class TransferAggregator:
     def __init__(self):

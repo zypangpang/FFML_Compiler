@@ -1,0 +1,7 @@
+POLICYID ['ONL01234']
+ON
+	ONL SEQ(5)[login, login, modify_password, transfer]
+IF
+	QUERY SINGLELIMIT(transfer.accountnumber) < transfer.value
+THEN
+	ALERT(transfer.id,  transfer.accountnumber);

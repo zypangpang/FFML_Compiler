@@ -509,17 +509,28 @@ class ASTVisitor:
                     f"Change SEQ time {seq_time} {SEQ_UNIT.name} to some {TIME_UNIT(SEQ_UNIT.value + 1).name}")
 
             event_seq = params['event_list']
-            ori_event_name = event_seq[-1]
 
             if OPT_UNION_ALL:
                 #t_name = f"{channel}_{ori_event_name}"
-                tselect = get_template("SELECT") \
+
+                # After pattern match, the detailed info need to be selected from original event table which is
+                # channel specific.
+                ori_event_name = event_seq[-1]
+                ori_event_select = get_template("SELECT") \
                     .set_value("PROJ", "*") \
                     .set_value("TABLE", bt(ori_event_name)) \
                     .set_value("CONDITION", f"channel = '{channel}'")
-                ori_event_table=self.get_new_name(COUNTER_TYPE.EVENT,"SELECT",*tselect.get_key_value())
-                self.create_view(tselect, ori_event_table, key='id')
-                t_name="event"
+                ori_event_table= self.get_new_name(COUNTER_TYPE.EVENT,"SELECT",*ori_event_select.get_key_value())
+                self.create_view(ori_event_select, ori_event_table, key='id')
+
+                # Pattern match
+                tselect = get_template("SELECT") \
+                    .set_value("PROJ", "*") \
+                    .set_value("TABLE", "event") \
+                    .set_value("CONDITION", f"channel = '{channel}'")
+                t_name=self.get_new_name(COUNTER_TYPE.EVENT,"SELECT",*tselect.get_key_value())
+                self.create_view(tselect, t_name, key='id')
+                #t_name="event"
             else:
                 t_name,ori_event_table=self.__seq_event_union_all(event_seq,channel)
 
@@ -533,13 +544,14 @@ class ASTVisitor:
                 else:
                     event_map[e]=1
                 event_tuple.append((e,event_map[e]))
+            last_event=f"{event_tuple[-1][0]}{event_tuple[-1][1]}"
 
             match_template = get_template("MATCH") \
                 .set_value("PROJ", "*") \
                 .set_value("TABLE", t_name) \
                 .set_value("PARTITION", "accountnumber") \
                 .set_value("ORDER", "rowtime") \
-                .set_value("MEASURES", f"{event_seq[-1]}.id as id,{event_seq[-1]}.rowtime AS rowtime") \
+                .set_value("MEASURES", f"{last_event}.id as id,{last_event}.rowtime AS rowtime") \
                 .set_value("PATTERN", " ".join([f"{e}{i}" for e,i in event_tuple])) \
                 .set_value("TIME_VAL", str(seq_time)) \
                 .set_value("TIME_UNIT", SEQ_UNIT.name) \
@@ -826,6 +838,9 @@ class BuiltInFuncs:
         'usualdeviceid': {
             "param_type": [('EventParam',)],
         },
+        'singlelimit': {
+            "param_type": [('EventParam',)],
+        },
         'alert': {
             "param_type": [('EventParam', 'EventParam')],
         },
@@ -889,6 +904,13 @@ class BuiltInFuncs:
         print(params)
         if not cls.verify_params("usualip", params):
             raise Exception("USUSALIP requires 1 parameter: EventParam")
+        return params
+
+    @classmethod
+    def params_singlelimit(cls, params, visitor):
+        print(params)
+        if not cls.verify_params("singlelimit", params):
+            raise Exception("SINGLELIMIT requires 1 parameter: EventParam")
         return params
 
     @classmethod
@@ -984,6 +1006,19 @@ class BuiltInFuncs:
             .set_value("CONDITION", condition_str)
         table_name=visitor.get_new_name(COUNTER_TYPE.EVENT,"SELECT",*t.get_key_value())
         visitor.create_view(t, table_name, key='id')
+
+        '''
+        time_unit=str(params[1]['value'])[-1]
+        if time_unit == 'd':
+            time_unit='DAY'
+        elif time_unit == 'm':
+            time_unit = 'MINUTE'
+        elif time_unit =='s':
+            time_unit='SECOND'
+        else:
+            log_collect(f"Unknown time unit {time_unit}",'error')
+            raise Exception(f"Unknown time unit {time_unit}")
+        '''
 
         if not params[1]['value'].is_integer():
             log_collect(f"TOTALDEBIT: {params[1]['value']} is truncated to {int(params[1]['value'])}",'warning')
@@ -1107,6 +1142,11 @@ class BuiltInFuncs:
     def usualdeviceid(cls, params, visitor: ASTVisitor):
         field = params[0]['value'][1]
         return cls.__scalar_function("USUALDEVICEID", "usualdid", [field], visitor)
+
+    @classmethod
+    def singlelimit(cls, params, visitor: ASTVisitor):
+        field = params[0]['value'][1]
+        return cls.__scalar_function("SINGLELIMIT", "singlelimit", [field], visitor)
 
     # Main call entry
     @classmethod

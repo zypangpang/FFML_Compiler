@@ -1,0 +1,5 @@
+POLICYID ['ONL01234']
+ON
+   ONL SEQ(5)[login, login, modify_address, modify_password, modify_password, modify_email, transfer]
+THEN
+   ALERT(transfer.id, transfer.accountnumber);

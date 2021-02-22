@@ -9,11 +9,15 @@ class FileManager:
         "events":"./data/exp_events.csv",
         'transfer':"./data/exp_transfer.csv",
         'result':'./data/exp_result.csv',
+        'agg_totaldebit':'./data/exp_agg_totaldebit.csv',
+        'agg_transcount': './data/exp_agg_transcount.csv',
     }
     heads={
         "events":"id,accountnumber,channel,rowtime,eventtype",
         "transfer":"id,ip,did,accountnumber,dest_accountnumber,sortcode,value,channel,rowtime,eventtype",
         "result":"id",
+        'agg_totaldebit': 'accountnumber,totaldebit,date',
+        'agg_transcount': 'accountnumber,transcount,date',
     }
     file_objs={}
     #transfer_path="/home/zypang/IdeaProjects/blink-test/spend-report/data/transfer.csv"
@@ -52,6 +56,7 @@ class EventWriter(abc.ABC):
     def write_result_id(self,event_dict):
         pass
 
+
 class FileEventWriter(EventWriter):
     def write_transfer(self,event_dict):
         file=FileManager.get_file('transfer')
@@ -65,6 +70,15 @@ class FileEventWriter(EventWriter):
     def write_result_id(self,event_dict):
         file=FileManager.get_file('result')
         file.write(f"{event_dict['id']}\n")
+
+    def write_agg_totaldebit(self,info_dict):
+        file=FileManager.get_file('agg_totaldebit')
+        file.write(f"{info_dict['accountnumber']},{info_dict['totaldebit']},{info_dict['date']}\n")
+
+    def write_agg_transcount(self, info_dict):
+        file = FileManager.get_file('agg_transcount')
+        file.write(f"{info_dict['accountnumber']},{info_dict['transcount']},{info_dict['date']}\n")
+
 
 class KafkaEventWriter(EventWriter):
     KAFKA_HOST='localhost'

@@ -1,0 +1,9 @@
+POLICYID ['ONL01234']
+ON
+	ONL[transfer]
+IF
+	QUERY TRANSCOUNT(ONL,3) > 3
+	AND
+	QUERY TOTALDEBIT(ONL,3) >= 5000.00
+THEN
+	ALERT (transfer.id,transfer.accountnumber);

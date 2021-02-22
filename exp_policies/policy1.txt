@@ -1,0 +1,6 @@
+POLICYID ['ONL01234']
+ON ONL [transfer]
+IF
+	QUERY BADACCOUNT (transfer.dest_accountnumber) = TRUE
+THEN
+	ALERT (transfer.id,transfer.accountnumber);

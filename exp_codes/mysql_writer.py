@@ -1,5 +1,10 @@
+import csv
+
 import mysql.connector
 import time
+
+from common import FileManager
+
 
 class MySQLDataWriter:
     def __init__(self):
@@ -57,10 +62,46 @@ def insert_usualdid(db):
     db.commit()
     print(f"Running time: {time.time() - begin}")
 
+def insert_singlelimit(db):
+    query = "INSERT INTO singlelimit(accountnumber,singlelimit) VALUES (%s,%s);"
+    data = []
+    singlelimit=1000
+    for id in range(100000):
+        data.append((id,singlelimit))
+
+    begin = time.time()
+    db.cursor.executemany(query, data)
+    db.commit()
+    print(f"Running time: {time.time() - begin}")
+
+def insert_transcount(db):
+    with open(FileManager.get_path("agg_transcount"),'r') as file:
+        reader=csv.reader(file)
+        next(reader)
+
+        query = "INSERT INTO ONL_transcount(accountnumber,transcount,`date`) VALUES (%s,%s,%s);"
+        begin = time.time()
+        db.cursor.executemany(query, reader)
+        db.commit()
+        print(f"Running time: {time.time() - begin}")
+
+def insert_totaldebit(db):
+    with open(FileManager.get_path("agg_totaldebit"),'r') as file:
+        reader=csv.reader(file)
+        next(reader)
+
+        query = "INSERT INTO ONL_totaldebit(accountnumber,totaldebit,`date`) VALUES (%s,%s,%s);"
+        begin = time.time()
+        db.cursor.executemany(query, reader)
+        db.commit()
+        print(f"Running time: {time.time() - begin}")
+
 
 if __name__ == '__main__':
     db = MySQLDataWriter()
-    insert_badaccount(db)
+    #insert_badaccount(db)
     #insert_usualip(db)
     #insert_usualdid(db)
+    #insert_singlelimit(db)
+    insert_totaldebit(db)
     db.close()

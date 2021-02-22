@@ -12,6 +12,17 @@ class DataSender:
         self.event_reader = csv.DictReader(self.event_file)
         self.transfer_reader = csv.DictReader(self.transfer_file)
 
+    def send_event(self,num):
+       for _ in range(num):
+           #if num>0 and id>=num:
+           #    break
+           #time.sleep(sleep_sec)
+           cur_event=self.event_reader.__next__()
+           cur_event['id']=int(cur_event['id'])
+           cur_event['accountnumber']=int(cur_event['accountnumber'])
+           #print(cur_event)
+           self.event_writer.write_event(cur_event)
+
     def send_event_transfer(self,num):
         #sleep_sec=1/freq
         id=0

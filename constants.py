@@ -113,6 +113,9 @@ PREDEFINED_EVENTS={
     "password_change",
     "login",
     "failed_login",
+    "modify_address",
+    "modify_password",
+    "modify_email",
 }
 
 # ********* Configurable **************

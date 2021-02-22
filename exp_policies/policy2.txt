@@ -1,0 +1,8 @@
+POLICYID ['ONL01234']
+ON ONL [transfer]
+IF
+	QUERY USUALIP (transfer.accountnumber) != transfer.ip
+	AND
+	QUERY USUALDEVICEID (transfer.accountnumber) != transfer.did
+THEN
+	ALERT (transfer.id,transfer.accountnumber);

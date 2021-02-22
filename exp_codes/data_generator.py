@@ -106,17 +106,41 @@ class TransferAggregator:
         return [x[1] for x in self.transcount[channel][accountnumber][-num:]]
 
 
+    def output_file(self):
+        writer=FileEventWriter()
+        for k,v in self.transcount.items():
+            for k in v:
+                for date,count in v[k]:
+                    info_dict={
+                        'accountnumber':k,
+                        'transcount':count,
+                        'date':date
+                    }
+                    writer.write_agg_transcount(info_dict)
+        for k,v in self.totaldebit.items():
+            for k in v:
+                for date,debit in v[k]:
+                    info_dict={
+                        'accountnumber':k,
+                        'totaldebit':debit,
+                        'date':date
+                    }
+                    writer.write_agg_totaldebit(info_dict)
+
+
+
+
     def output(self):
         print("Transcount:")
         for k,v in self.transcount.items():
             print(k)
             for k, v in v.items():
-                print(f"{k}: {dict(v)}")
+                print(f"{k}: {v}")
         print("Totaldebit:")
         for k,v in self.totaldebit.items():
             print(k)
             for k, v in v.items():
-                print(f"{k}: {dict(v)}")
+                print(f"{k}: {v}")
 
 class TransferResultCollector:
 
@@ -230,6 +254,7 @@ def continuous_data_generate(event_writer,num,sleep_sec, channel,event,event_hoo
 
 def simple_data_generate(event_writer,num, channels,event,event_hook=[],):
     range_end = num // 10
+    range_end = 100 if range_end > 100 else range_end
     dt = TimeGenerator()
     id=0
     while id < num:
@@ -249,7 +274,7 @@ def simple_data_generate(event_writer,num, channels,event,event_hook=[],):
             if event_hook:
                 for hook in event_hook:
                     hook(cur_event)
-        # dt.forward('h',random.randint(1,2))
+        dt.forward('m',random.randint(5,30))
         # dt.forward('h',1)
 
 def distinct_data_generate(event_writer,num,channels,event,event_hook=[],):
@@ -293,7 +318,7 @@ def medium_data_generate(event_writer,num,channel,events_list,duration,event_hoo
             for events in events_list:
                 for event in events:
                     for a_num in range(row_per_event):
-                        time_str=dt.get_next_time(timedelta(minutes=1))
+                        time_str=dt.get_next_time(timedelta(seconds=10))
                         cur_event={
                             'id':id,
                             'accountnumber':a_num,
@@ -308,7 +333,7 @@ def medium_data_generate(event_writer,num,channel,events_list,duration,event_hoo
                             for hook in event_hook:
                                 hook(cur_event)
                         id += 1
-            dt.forward('h',2)
+            #dt.forward('h',2)
 
 
 
@@ -324,20 +349,26 @@ def simple_generate(num):
     channel="ONL"
     #events_file=FileManager.get_file("events")
     event_writer=FileEventWriter()
-    m_hook=TransferValueAssigner(event_writer, tmin=400, tmax=800)
-    simple_data_generate(event_writer,num,[channel],"transfer",[m_hook.hook])
+    #m_hook=TransferValueAssigner(event_writer, tmin=400, tmax=800)
+    assigner=TransferValueAssigner(event_writer=event_writer,tmin=1500,tmax=2000)
+    aggregator=TransferAggregator()
+    result_collector=TransferResultCollector(event_writer,aggregator,'Medium')
+    simple_data_generate(event_writer,num,[channel],"transfer",[assigner.hook,aggregator.hook])
+    #aggregator.output()
+    aggregator.output_file()
 
 
-def medium_generate():
+def medium_generate(num):
     channel="ONL"
-    events=['failed_login','failed_login',"login",'transfer']
+    events=['login', 'login', 'modify_address', 'modify_password', 'modify_password', 'modify_email', 'transfer']
     #simple_data_generate(10,"exp_test.txt","ONL","transfer",500)
 
     event_writer=FileEventWriter()
     assigner=TransferValueAssigner(event_writer=event_writer,tmin=1500,tmax=2000)
     aggregator=TransferAggregator()
     result_collector=TransferResultCollector(event_writer,aggregator,'Medium')
-    medium_data_generate(event_writer,1000,channel,[events],10,[assigner.hook,result_collector.hook,aggregator.hook])
+    #medium_data_generate(event_writer,1000,channel,[events],10,[assigner.hook,aggregator.hook,result_collector.hook])
+    medium_data_generate(event_writer,num,channel,[events],30,[assigner.hook])
     aggregator.output()
 
 
@@ -352,10 +383,14 @@ def test():
 
 
 if __name__ == '__main__':
-    num=int(sys.argv[1])
+    try:
+        num=int(sys.argv[1])
+    except:
+        num=1000
     try:
         #distinct_generate(num)
         simple_generate(num)
+        #medium_generate(num)
     except Exception as e:
         print(e)
     FileManager.close_all()

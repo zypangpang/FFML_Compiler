@@ -1,0 +1,8 @@
+POLICYID ['ONL01234']
+ON ONL[transfer]
+IF
+	QUERY TOTALDEBIT(ONL,1) + transfer.value >= 500.00
+	AND 
+	HISTORY(5) [QUERY TOTALDEBIT(ONL,1) >= 250.00] >= 3
+THEN
+	ALERT(transfer.id, transfer.accountnumber);

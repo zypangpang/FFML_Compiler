@@ -429,7 +429,7 @@ class ASTVisitor:
         except KeyError:
             raise Exception("Current table undefined or get key failed")
 
-        if not OPT_UDF:
+        if (not OPT_UDF) and key != 'id' :
             t_name=self.__cast_join(table,key,t_name,cur_table_key)
 
         in_body_template=get_template("PROJ").set_value("PROJ", cur_table_key).set_value("TABLE", t_name)
@@ -749,7 +749,9 @@ class ASTVisitor:
             # id_operator = left if self.symbol_table.resolve(left[0]).attr['key'] == 'id' else right
             key, id_op, join_key = self.__get_key_and_idop(left, right)
             template = get_template("JOIN").set_value("PROJ",
-                                                      f"{id_op[0]}.{key} AS {key}, {left[0]}.`{left[1]}`"
+                                                      f"{id_op[0]}.{key} AS {key},"
+                                                      f"{id_op[0]}.rowtime AS rowtime,"
+                                                      f" {left[0]}.`{left[1]}`"
                                                       f" {op} {right[0]}.`{right[1]}` AS `result`") \
                 .set_value("LEFT", left[0]).set_value("RIGHT", right[0]) \
                 .set_value("KEY", join_key) \
@@ -1024,7 +1026,7 @@ class BuiltInFuncs:
             log_collect(f"TOTALDEBIT: {params[1]['value']} is truncated to {int(params[1]['value'])}",'warning')
         interval = int(params[1]['value'])
         daycount = int(params[2]['value'])
-        template = get_template("WINDOW_WITH_END").set_value("PROJ", "accountnumber, SUM(`value`) AS totaldebit") \
+        template = get_template("WINDOW_WITH_END").set_value("PROJ", "accountnumber, SUM(`value`) AS `totaldebit`") \
             .set_value("TABLE", table_name) \
             .set_value("KEY", "accountnumber") \
             .set_value("INTERVAL", f"'{interval}' DAY")
@@ -1033,7 +1035,7 @@ class BuiltInFuncs:
         #template=get_template("SELECT").set_value("PROJ", "accountnumber, totaldebit, rowtime")\
         #                .set_value("TABLE",t_name)\
         #                .set_value("CONDITION",f"rowtime >= CURRENT_TIMESTAMP - INTERVAL '{daycount}' DAY")
-        template = get_template("TOPN").set_value("PROJ", "accountnumber, totaldebit, rowtime") \
+        template = get_template("TOPN").set_value("PROJ", "accountnumber, `totaldebit`, rowtime") \
             .set_value("KEY", "accountnumber") \
             .set_value("ORDER", "rowtime") \
             .set_value("TABLE", t_name) \
@@ -1092,7 +1094,7 @@ class BuiltInFuncs:
             log_collect(f"TRANSCOUNT: {params[1]['value']} is truncated to {int(params[1]['value'])}", 'warning')
         interval = int(params[1]['value'])
         daycount = int(params[2]['value'])
-        template = get_template("WINDOW_WITH_END").set_value("PROJ", "accountnumber, COUNT(*) AS transcount") \
+        template = get_template("WINDOW_WITH_END").set_value("PROJ", "accountnumber, COUNT(*) AS `transcount`") \
             .set_value("TABLE", table_name) \
             .set_value("KEY", "accountnumber") \
             .set_value("INTERVAL", f"'{interval}' DAY")
@@ -1101,7 +1103,7 @@ class BuiltInFuncs:
         # template=get_template("SELECT").set_value("PROJ", "accountnumber, totaldebit, rowtime")\
         #                .set_value("TABLE",t_name)\
         #                .set_value("CONDITION",f"rowtime >= CURRENT_TIMESTAMP - INTERVAL '{daycount}' DAY")
-        template = get_template("TOPN").set_value("PROJ", "accountnumber, transcount, rowtime") \
+        template = get_template("TOPN").set_value("PROJ", "accountnumber, `transcount`, rowtime") \
             .set_value("KEY", "accountnumber") \
             .set_value("ORDER", "rowtime") \
             .set_value("TABLE", t_name) \

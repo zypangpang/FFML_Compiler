@@ -89,7 +89,7 @@ GEN_JAVA=False
 translator_configs={
     'SEQ_UNIT':TIME_UNIT.MINUTE,
     'SEQ_TIME':5,
-    'OPT_LEVEL':2,
+    'OPT_LEVEL':4,
     #'OPT_UNION_ALL':True,
     #'OPT_MERGE_TABLE':True,
     #'OPT_UDF':True,

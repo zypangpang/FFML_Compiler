@@ -1,0 +1,8 @@
+POLICYID ['ONL01234']
+ON ONL [transfer]
+IF
+	QUERY SINGLELIMIT(transfer.accountnumber) < transfer.value
+	AND
+    QUERY CHECKLOCATION (transfer.accountnumber,transfer.ip) = FALSE
+THEN
+	ALERT (transfer.id,transfer.accountnumber);

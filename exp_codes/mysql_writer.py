@@ -96,6 +96,18 @@ def insert_totaldebit(db):
         db.commit()
         print(f"Running time: {time.time() - begin}")
 
+def insert_usuallocation(db):
+    query = "INSERT INTO usuallocation(accountnumber,location) VALUES (%s,%s);"
+    data = []
+    location="Beijing"
+    for id in range(100000):
+        data.append((id, location))
+
+    begin = time.time()
+    db.cursor.executemany(query, data)
+    db.commit()
+    print(f"Running time: {time.time() - begin}")
+
 
 if __name__ == '__main__':
     db = MySQLDataWriter()
@@ -103,5 +115,5 @@ if __name__ == '__main__':
     #insert_usualip(db)
     #insert_usualdid(db)
     #insert_singlelimit(db)
-    insert_totaldebit(db)
+    insert_usuallocation(db)
     db.close()

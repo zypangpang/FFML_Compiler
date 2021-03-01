@@ -843,6 +843,12 @@ class BuiltInFuncs:
         'singlelimit': {
             "param_type": [('EventParam',)],
         },
+        'checklocation': {
+            "param_type": [('EventParam','EventParam')],
+        },
+        'foreignip': {
+            "param_type": [('EventParam',)],
+        },
         'alert': {
             "param_type": [('EventParam', 'EventParam')],
         },
@@ -902,10 +908,22 @@ class BuiltInFuncs:
         return params
 
     @classmethod
+    def params_foreignip(cls, params, visitor):
+        if not cls.verify_params("foreignip", params):
+            raise Exception("FOREIGNIP requires 1 parameter: EventParam")
+        return params
+
+    @classmethod
     def params_usualip(cls, params, visitor):
         print(params)
         if not cls.verify_params("usualip", params):
             raise Exception("USUSALIP requires 1 parameter: EventParam")
+        return params
+
+    @classmethod
+    def params_checklocation(cls, params, visitor):
+        if not cls.verify_params("checklocation", params):
+            raise Exception("CHECKLOCATION requires 1 parameter: EventParam")
         return params
 
     @classmethod
@@ -1149,6 +1167,16 @@ class BuiltInFuncs:
     def singlelimit(cls, params, visitor: ASTVisitor):
         field = params[0]['value'][1]
         return cls.__scalar_function("SINGLELIMIT", "singlelimit", [field], visitor)
+
+    @classmethod
+    def checklocation(cls, params, visitor: ASTVisitor):
+        fields = [params[0]['value'][1],params[1]['value'][1]]
+        return cls.__scalar_function("CHECKLOCATION", "clocation", fields, visitor)
+
+    @classmethod
+    def foreignip(cls, params, visitor: ASTVisitor):
+        fields = [params[0]['value'][1]]
+        return cls.__scalar_function("FOREIGNIP", "fip", fields, visitor)
 
     # Main call entry
     @classmethod

@@ -14,7 +14,7 @@ class FileManager:
     }
     heads={
         "events":"id,accountnumber,channel,rowtime,eventtype",
-        "transfer":"id,ip,did,accountnumber,dest_accountnumber,sortcode,value,channel,rowtime,eventtype",
+        "transfer":"id,ip,did,accountnumber,dest_accountnumber,dest_ip,sortcode,value,channel,rowtime,eventtype",
         "result":"id",
         'agg_totaldebit': 'accountnumber,totaldebit,date',
         'agg_transcount': 'accountnumber,transcount,date',
@@ -61,7 +61,8 @@ class FileEventWriter(EventWriter):
     def write_transfer(self,event_dict):
         file=FileManager.get_file('transfer')
         sortcode=1
-        file.write(f"{event_dict['id']},{event_dict['ip']},{event_dict['did']},{event_dict['accountnumber']},{event_dict['dest_accountnumber']},{sortcode},{event_dict['value']},"
+        file.write(f"{event_dict['id']},{event_dict['ip']},{event_dict['did']},{event_dict['accountnumber']},"
+                   f"{event_dict['dest_accountnumber']},{event_dict['dest_ip']},{sortcode},{event_dict['value']},"
                    f"{event_dict['channel']},{event_dict['rowtime']},{event_dict['eventtype']}\n")
     def write_event(self,event_dict):
         file=FileManager.get_file('events')

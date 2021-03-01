@@ -1,0 +1,10 @@
+POLICYID ['ONL01234']
+ON ONL[transfer]
+IF
+	QUERY TRANSCOUNT(ONL,3) > 10
+	AND
+	QUERY FOREIGNIP (transfer.dest_ip) = TRUE
+	AND 
+	transfer.value < 10000
+THEN
+	ALERT (transfer.id,transfer.accountnumber);

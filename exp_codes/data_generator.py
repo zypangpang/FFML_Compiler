@@ -45,10 +45,12 @@ class TransferValueAssigner:
         cur_event['did'] = 2020
 
     def assign_ip(self,cur_event):
-        if cur_event['id'] % 10 == 0:
-            cur_event['ip'] = '188.188.188.188'
-        else:
-            cur_event['ip'] = '158.158.158.158'
+        cur_event['ip'] = '183.173.165.69'
+        cur_event['dest_ip'] = '140.82.14.144'
+        #if cur_event['id'] % 10 == 0:
+        #    cur_event['ip'] = '188.188.188.188'
+        #else:
+        #    cur_event['ip'] = '158.158.158.158'
 
 
 class TransferAggregator:
@@ -353,9 +355,9 @@ def simple_generate(num):
     assigner=TransferValueAssigner(event_writer=event_writer,tmin=1500,tmax=2000)
     aggregator=TransferAggregator()
     result_collector=TransferResultCollector(event_writer,aggregator,'Medium')
-    simple_data_generate(event_writer,num,[channel],"transfer",[assigner.hook,aggregator.hook])
+    simple_data_generate(event_writer,num,[channel],"transfer",[assigner.hook])
     #aggregator.output()
-    aggregator.output_file()
+    #aggregator.output_file()
 
 
 def medium_generate(num):

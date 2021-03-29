@@ -11,6 +11,8 @@ DEFAULT_OUTPUT_PATH=Path.home().joinpath("flink_sql/out.fsql")
 DEFAULT_CONFIG_PATH=Path.home().joinpath(".ffml_compiler/configs.ini")
 DEFAULT_FONT_SIZE=14
 DEFAULT_EXTERNAL_EDITOR='mousepad'
+DEFAULT_FLINK_HOME=Path.home().joinpath("flink")
+DEFAULT_JOB_JAR=Path.home().joinpath('flink/flinkSQLJob.jar')
 
 configs=None
 SHOW_SETTING_DIALOG=False

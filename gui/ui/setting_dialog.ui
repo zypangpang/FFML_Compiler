@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>435</width>
-    <height>421</height>
+    <width>433</width>
+    <height>530</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,29 +19,13 @@
   <property name="modal">
    <bool>true</bool>
   </property>
-  <widget class="QDialogButtonBox" name="buttonBox">
+  <widget class="QWidget" name="">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>380</y>
+     <y>11</y>
      <width>411</width>
-     <height>31</height>
-    </rect>
-   </property>
-   <property name="orientation">
-    <enum>Qt::Horizontal</enum>
-   </property>
-   <property name="standardButtons">
-    <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-   </property>
-  </widget>
-  <widget class="QWidget" name="layoutWidget">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>10</y>
-     <width>411</width>
-     <height>364</height>
+     <height>511</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -233,17 +217,17 @@
     </item>
     <item>
      <layout class="QGridLayout" name="gridLayout">
-      <item row="1" column="0">
-       <widget class="QLabel" name="bg_label_6">
+      <item row="4" column="0">
+       <widget class="QLabel" name="bg_label_8">
         <property name="text">
-         <string>Out file path</string>
+         <string>Editor</string>
         </property>
        </widget>
       </item>
-      <item row="2" column="0">
-       <widget class="QLabel" name="bg_label_7">
+      <item row="5" column="0">
+       <widget class="QLabel" name="bg_label_9">
         <property name="text">
-         <string>Font size</string>
+         <string>Flink home</string>
         </property>
        </widget>
       </item>
@@ -257,20 +241,50 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="1">
-       <widget class="QLineEdit" name="out_file_edit"/>
-      </item>
-      <item row="4" column="0">
-       <widget class="QLabel" name="bg_label_8">
+      <item row="1" column="0">
+       <widget class="QLabel" name="bg_label_6">
         <property name="text">
-         <string>Editor</string>
+         <string>Out file path</string>
         </property>
        </widget>
+      </item>
+      <item row="5" column="1">
+       <widget class="QLineEdit" name="flink_home_edit"/>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="bg_label_7">
+        <property name="text">
+         <string>Font size</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="out_file_edit"/>
       </item>
       <item row="4" column="1">
        <widget class="QLineEdit" name="editor_edit"/>
       </item>
+      <item row="6" column="0">
+       <widget class="QLabel" name="bg_label_10">
+        <property name="text">
+         <string>Job jar</string>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="1">
+       <widget class="QLineEdit" name="job_jar_edit"/>
+      </item>
      </layout>
+    </item>
+    <item>
+     <widget class="QDialogButtonBox" name="buttonBox">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="standardButtons">
+       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+      </property>
+     </widget>
     </item>
    </layout>
   </widget>

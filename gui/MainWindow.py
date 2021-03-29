@@ -3,9 +3,10 @@ import subprocess
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QKeySequence, QIcon, QTextDocument, QFont, QFontDatabase
 from PyQt5.QtCore import Qt, QUrl
-from PyQt5.QtWidgets import QSizePolicy, QVBoxLayout, QFileDialog, QMessageBox, QPlainTextDocumentLayout
+from PyQt5.QtWidgets import QSizePolicy, QVBoxLayout, QFileDialog, QMessageBox, QPlainTextDocumentLayout, QAction
 import gui.resources_gen.qtresource
 
+from pathlib import Path
 from constants import GUI
 import gui.gui_constant as gconstant
 from gui.CentralWidget import CentralWidget
@@ -103,7 +104,25 @@ class MainWindow(QtWidgets.QMainWindow):
         self.toolbar.addAction(QIcon(":/images/save-filled.png"),"Save",self.save)
         self.toolbar.addAction(QIcon(":/images/check.png"),"Parse",self.parse)
         self.toolbar.addAction(QIcon(":/images/build-filled.png"),"Compile", self.compile)
-        self.toolbar.addAction(QIcon(":/images/play.png"),"Run")
+        #self.toolbar.addAction(QIcon(":/images/play.png"),"Run",self.run)
+        self.viewAct = QAction(QIcon(":/images/view.png"), "View", self)
+        self.viewAct.setDisabled(True)
+        self.viewAct.triggered.connect(self.view_compiled)
+        self.toolbar.addAction(self.viewAct)
+
+        self.runAct = QAction(QIcon(":/images/play.png"),"Run",self)
+        self.runAct.setDisabled(True)
+        self.runAct.triggered.connect(self.run)
+        self.toolbar.addAction(self.runAct)
+
+        #const QIcon openIcon = QIcon::fromTheme("document-open", QIcon(":/images/open.png"));
+        #QAction * openAct = new
+        #QAction(openIcon, tr("&Open..."), this);
+        #openAct->setShortcuts(QKeySequence::Open);
+        #openAct->setStatusTip(tr("Open an existing file"));
+        #connect(openAct, & QAction::triggered, this, & MainWindow::open);
+        #fileMenu->addAction(openAct);
+        #fileToolBar->addAction(openAct);
 
     def __init_statusbar(self):
         self.statusbar=self.statusBar()
@@ -158,6 +177,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.__save_tmp_file(True)
             self.show_log([])
             self.show_message("File opened")
+            self.runAct.setDisabled(True)
+            self.viewAct.setDisabled(True)
 
     def save_as(self):
        fileName=QFileDialog.getSaveFileName(self,"Save as", self.cur_file_name if self.cur_file_name  else str(gconstant.DEFAULT_OPEN_PATH), "FFML files (*.ffml)")
@@ -234,7 +255,19 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.code_edit.setHighLightColor(False)
         else:
             self.show_log(get_log_list() + ["Compiling succeed. No error reported"])
+            self.runAct.setDisabled(False)
+            self.viewAct.setDisabled(False)
         self.show_message("Compiling finished")
+
+    def run(self):
+        flink_home = gconstant.configs.get_ide_value(gconstant.configs.FLINK_HOME)
+        job_jar= gconstant.configs.get_ide_value(gconstant.configs.JOB_JAR)
+        flink_exec=str(Path(flink_home).joinpath('bin/flink'))
+        command = [flink_exec,'run',job_jar,self.out_file_name]
+        terminal_command=['alacritty', '-e']+command
+        log=[f"running {' '.join(command)}"]
+        self.show_log(log)
+        subprocess.Popen(terminal_command)
 
     def view_compiled(self):
         if not self.out_file_name:

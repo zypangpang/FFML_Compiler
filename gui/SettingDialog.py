@@ -32,6 +32,8 @@ class SettingDialog(QtWidgets.QDialog):
         self.ide_widgets[configs.OUT_FILE_PATH] = self.ui.out_file_edit
         self.ide_widgets[configs.FONT_SIZE] = self.ui.font_size_box
         self.ide_widgets[configs.EDITOR] = self.ui.editor_edit
+        self.ide_widgets[configs.FLINK_HOME]=self.ui.flink_home_edit
+        self.ide_widgets[configs.JOB_JAR]=self.ui.job_jar_edit
 
     def __load_settings(self):
         for key, widget in self.compiler_widgets.items():

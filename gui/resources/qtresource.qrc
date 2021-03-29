@@ -10,5 +10,6 @@
     <file>images/save-filled.png</file>
     <file>images/play-filled.png</file>
     <file>images/play.png</file>
+    <file>images/view.png</file>
 </qresource>
 </RCC>

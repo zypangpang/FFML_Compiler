@@ -283,7 +283,6 @@ class ASTVisitor:
 
     def __getfunc(self, name):
         def default_func(node):
-            # log_print(f"visit {name}")
             for c in node.children:
                 self.visit(c)
 

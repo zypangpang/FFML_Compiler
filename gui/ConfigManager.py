@@ -24,6 +24,8 @@ class GuiConfigs():
     OUT_FILE_PATH='out file path'
     FONT_SIZE='font size'
     EDITOR='external editor'
+    FLINK_HOME='flink home'
+    JOB_JAR='job jar'
 
 
     @classmethod
@@ -44,6 +46,8 @@ class GuiConfigs():
             cls.OUT_FILE_PATH: gconstants.DEFAULT_OUTPUT_PATH,
             cls.FONT_SIZE:gconstants.DEFAULT_FONT_SIZE,
             cls.EDITOR:gconstants.DEFAULT_EXTERNAL_EDITOR,
+            cls.FLINK_HOME:gconstants.DEFAULT_FLINK_HOME,
+            cls.JOB_JAR:gconstants.DEFAULT_JOB_JAR
         }
         with open(file_path, "w") as f:
             configs.write(f)

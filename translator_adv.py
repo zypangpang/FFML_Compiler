@@ -4,7 +4,7 @@ from typing import List
 
 import constants
 from constants import SYMBOL_TYPE, COUNTER_TYPE, PREDEFINED_EVENTS, TIME_UNIT
-from parser import ASTNode
+from ffml_parser import ASTNode
 from utils import MyTemplate, bt, ListTemplate, log_info, log_collect
 #from functools import reduce
 

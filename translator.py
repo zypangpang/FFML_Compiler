@@ -2,7 +2,7 @@ import logging
 import re
 import constants
 from constants import SYMBOL_TYPE, COUNTER_TYPE, translator_configs, PREDEFINED_EVENTS, LOG_LEVEL, TIME_UNIT,GEN_JAVA
-from parser import ASTNode
+from ffml_parser import ASTNode
 from utils import MyTemplate, bt, ListTemplate, log_info,log_collect
 from functools import reduce
 

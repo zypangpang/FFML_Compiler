@@ -8,7 +8,7 @@ from grammar_related import get_grammar_from_file, left_factoring, get_productio
 from first_follow_set import FirstFollowSet
 from constants import EMPTY
 from lexer import Lexer,get_symbol_table,get_dfa_from_file
-from parser import  Parser
+from ffml_parser import Parser
 from preprocess import Preprocessor
 #from translator import ASTVisitor
 from translator_adv import ASTVisitor
